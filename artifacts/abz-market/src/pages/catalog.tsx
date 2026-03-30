@@ -102,8 +102,8 @@ export default function Catalog() {
   return (
     <MobileLayout hideNav={false} title="Katalog" showBack>
 
-      {/* ── Sticky top bar ── */}
-      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur-md border-b border-border/40">
+      {/* ── Search bar (scrolls with content) ── */}
+      <div className="bg-background border-b border-border/40">
         {/* Search row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
           {/* Back-to-categories button when category is active */}
