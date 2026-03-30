@@ -79,12 +79,17 @@ interface TelegramWebApp {
 const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
 
 // Initialize ONCE at module level (no React re-render triggered)
+// Only fully initializes inside actual Telegram (initData is non-empty)
 let _initialized = false;
 export function initTelegramOnce() {
   if (_initialized || !tg) return;
   _initialized = true;
+  // Always call ready() so Telegram hides the loading spinner
   tg.ready();
-  tg.expand();
+  // expand() only inside real Telegram — in dev/Replit preview it causes iframe resize flicker
+  if (tg.initData) {
+    tg.expand();
+  }
 }
 
 // Stable haptic function (no hook, no re-render)

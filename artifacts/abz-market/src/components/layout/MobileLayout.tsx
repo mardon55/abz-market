@@ -74,7 +74,7 @@ export function MobileLayout({
   };
 
   return (
-    <div className="relative mx-auto max-w-[430px] bg-background min-h-[100dvh] shadow-2xl overflow-hidden flex flex-col">
+    <div className="relative mx-auto max-w-[430px] bg-background h-[100dvh] shadow-2xl overflow-hidden flex flex-col">
       {/* ── Header ── */}
       {(title || showBack || headerRight !== undefined) && (
         <header
