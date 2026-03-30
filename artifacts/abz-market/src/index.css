@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -48,29 +48,29 @@
   --radius-full: 9999px;
 }
 
+/* ─── Light (iOS Glassmorphism) ────────────────────────────── */
 :root {
-  /* White & Purple Theme */
-  --background: 240 20% 99%;
-  --foreground: 240 10% 10%;
-  
+  --background: 270 60% 98%;
+  --foreground: 240 15% 12%;
+
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 10%;
-  
+  --card-foreground: 240 15% 12%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 10%;
-  
-  --primary: 262 83% 58%; /* Purple #7C3AED */
+  --popover-foreground: 240 15% 12%;
+
+  --primary: 262 83% 58%;
   --primary-foreground: 0 0% 100%;
-  
-  --secondary: 262 20% 96%; /* Very light purple */
-  --secondary-foreground: 262 83% 45%;
-  
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 5% 45%;
-  
-  --accent: 262 83% 96%;
-  --accent-foreground: 262 83% 58%;
-  
+
+  --secondary: 262 30% 95%;
+  --secondary-foreground: 262 60% 40%;
+
+  --muted: 270 20% 95%;
+  --muted-foreground: 240 8% 52%;
+
+  --accent: 262 50% 93%;
+  --accent-foreground: 262 83% 50%;
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
@@ -79,57 +79,59 @@
 
   --warning: 38 92% 50%;
   --warning-foreground: 0 0% 100%;
-  
-  --border: 240 6% 90%;
-  --input: 240 6% 90%;
-  --ring: 262 83% 58%;
-  
-  --radius: 0.75rem;
 
+  --border: 262 20% 88%;
+  --input: 262 20% 88%;
+  --ring: 262 83% 58%;
+
+  --radius: 1rem;
   --tg-theme-bg-color: hsl(var(--background));
 }
 
+/* ─── Dark mode ─────────────────────────────────────────────── */
 .dark {
-  --background: 240 10% 4%;
-  --foreground: 0 0% 98%;
-  
-  --card: 240 10% 6%;
-  --card-foreground: 0 0% 98%;
-  
-  --popover: 240 10% 6%;
-  --popover-foreground: 0 0% 98%;
-  
-  --primary: 262 83% 65%; /* Lighter purple for dark mode */
+  --background: 240 12% 6%;
+  --foreground: 0 0% 96%;
+
+  --card: 240 12% 9%;
+  --card-foreground: 0 0% 96%;
+
+  --popover: 240 12% 9%;
+  --popover-foreground: 0 0% 96%;
+
+  --primary: 262 80% 68%;
   --primary-foreground: 0 0% 100%;
-  
-  --secondary: 240 10% 12%;
-  --secondary-foreground: 0 0% 98%;
-  
-  --muted: 240 10% 12%;
-  --muted-foreground: 240 5% 65%;
-  
-  --accent: 262 30% 15%;
-  --accent-foreground: 262 83% 75%;
-  
-  --destructive: 0 62% 30%;
+
+  --secondary: 240 12% 14%;
+  --secondary-foreground: 0 0% 90%;
+
+  --muted: 240 10% 14%;
+  --muted-foreground: 240 6% 62%;
+
+  --accent: 262 25% 18%;
+  --accent-foreground: 262 80% 78%;
+
+  --destructive: 0 60% 42%;
   --destructive-foreground: 0 0% 98%;
 
-  --success: 142 60% 30%;
+  --success: 142 55% 35%;
   --success-foreground: 0 0% 98%;
 
-  --warning: 38 70% 40%;
+  --warning: 38 65% 45%;
   --warning-foreground: 0 0% 98%;
-  
-  --border: 240 10% 15%;
-  --input: 240 10% 15%;
-  --ring: 262 83% 65%;
+
+  --border: 240 10% 18%;
+  --input: 240 10% 18%;
+  --ring: 262 80% 68%;
 
   --tg-theme-bg-color: hsl(var(--background));
 }
 
+/* ─── Base ──────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html, body, #root {
@@ -138,9 +140,28 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased text-foreground;
     overscroll-behavior: none;
     touch-action: pan-x pan-y;
+    /* iOS-style page background gradient */
+    background: linear-gradient(160deg,
+      #ede9fe 0%,
+      #f5f3ff 18%,
+      #ffffff 42%,
+      #faf5ff 68%,
+      #ede9fe 100%
+    );
+    background-attachment: fixed;
+  }
+
+  .dark body, .dark {
+    background: linear-gradient(160deg,
+      #1a0533 0%,
+      #0f0a1e 30%,
+      #0a0a0f 60%,
+      #12092b 100%
+    ) !important;
+    background-attachment: fixed !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -148,22 +169,108 @@
     @apply tracking-tight;
   }
 
-  /* Hide scrollbar for clean horizontal scrolls */
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+  /* Smooth scrollbar hide */
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 }
 
+/* ─── Glass utilities ───────────────────────────────────────── */
 @layer utilities {
-  .glass-panel {
-    @apply bg-background/80 backdrop-blur-xl border border-border/50 shadow-sm;
+  /* Frosted glass — main panel */
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
   }
-  
-  .tap-highlight-transparent {
-    -webkit-tap-highlight-color: transparent;
+
+  /* Frosted glass — card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.50);
+    box-shadow:
+      0 8px 32px rgba(124, 58, 237, 0.07),
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 -1px 0 rgba(124, 58, 237, 0.04) inset;
+  }
+
+  /* Frosted glass — nav bar */
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border-top: 1px solid rgba(255, 255, 255, 0.70);
+    box-shadow:
+      0 -8px 32px rgba(124, 58, 237, 0.06),
+      0 -1px 0 rgba(124, 58, 237, 0.08);
+  }
+
+  /* Dark glass variants */
+  .dark .glass {
+    background: rgba(15, 10, 30, 0.75);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .dark .glass-card {
+    background: rgba(20, 14, 42, 0.70);
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  }
+  .dark .glass-nav {
+    background: rgba(10, 8, 20, 0.88);
+    border-top-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Vibrancy input field */
+  .glass-input {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.70);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.05) inset;
+  }
+  .dark .glass-input {
+    background: rgba(30, 20, 60, 0.60);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #7C3AED, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* iOS shadow — subtle & colorful */
+  .shadow-ios {
+    box-shadow:
+      0 4px 24px rgba(124, 58, 237, 0.12),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  .shadow-ios-lg {
+    box-shadow:
+      0 12px 48px rgba(124, 58, 237, 0.16),
+      0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+  .shadow-ios-sm {
+    box-shadow:
+      0 2px 12px rgba(124, 58, 237, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Press states */
+  .press {
+    @apply active:scale-[0.97] transition-transform duration-100;
+  }
+  .press-sm {
+    @apply active:scale-[0.95] transition-transform duration-100;
   }
 }

@@ -103,26 +103,24 @@ export default function Catalog() {
     <MobileLayout hideNav={false} title="Katalog" showBack>
 
       {/* ── Search bar (scrolls with content) ── */}
-      <div className="bg-background border-b border-border/40">
+      <div className="border-b border-white/30">
         {/* Search row */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-          {/* Back-to-categories button when category is active */}
           {activeCategory && (
             <button
               onClick={clearCategory}
-              className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 press-sm"
             >
               <ArrowLeft className="w-4 h-4 text-primary" />
             </button>
           )}
 
-          {/* Search input */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="search"
               placeholder={activeCategory ? `${activeCategoryName}da qidirish...` : "Mahsulot qidirish..."}
-              className="w-full pl-9 pr-9 h-10 bg-muted/60 border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all placeholder:text-muted-foreground"
+              className="w-full pl-9 pr-9 h-10 glass-input rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-foreground"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -133,25 +131,26 @@ export default function Catalog() {
             )}
           </div>
 
-          {/* Sort button (only when showing products) */}
           {showProducts && (
             <button
               onClick={() => { hapticFeedback("selection"); setShowSortSheet(true); }}
-              className="w-9 h-9 rounded-xl bg-muted/60 border border-border/50 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              className="w-9 h-9 rounded-2xl glass-card flex items-center justify-center shrink-0 press-sm shadow-ios-sm"
             >
-              <SlidersHorizontal className="w-4 h-4 text-foreground" />
+              <SlidersHorizontal className="w-4 h-4 text-foreground/70" />
             </button>
           )}
         </div>
 
-        {/* Category chips row (when inside a category) */}
+        {/* Category chips */}
         {showProducts && categories.length > 0 && (
           <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pb-2.5">
             <button
               onClick={clearCategory}
               className={cn(
-                "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all",
-                !activeCategory ? "bg-primary text-white border-primary" : "bg-background text-foreground border-border"
+                "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all",
+                !activeCategory
+                  ? "bg-primary text-white shadow-ios-sm shadow-primary/30"
+                  : "glass-card text-foreground/70"
               )}
             >
               Barchasi
@@ -161,10 +160,10 @@ export default function Catalog() {
                 key={cat.id}
                 onClick={() => selectCategory(cat.id)}
                 className={cn(
-                  "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap",
+                  "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap",
                   activeCategory === cat.id
-                    ? "bg-primary text-white border-primary"
-                    : "bg-background text-foreground border-border"
+                    ? "bg-primary text-white shadow-ios-sm shadow-primary/30"
+                    : "glass-card text-foreground/70"
                 )}
               >
                 {catEmoji(cat.name)} {cat.name}
@@ -188,7 +187,7 @@ export default function Catalog() {
           {/* 2-column category cards */}
           {catLoading ? (
             <div className="grid grid-cols-2 gap-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+              {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-36 rounded-3xl" />)}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -196,24 +195,25 @@ export default function Catalog() {
                 <button
                   key={cat.id}
                   onClick={() => selectCategory(cat.id)}
-                  className="relative overflow-hidden rounded-2xl aspect-[4/3] active:scale-[0.97] transition-transform shadow-sm"
+                  className="relative overflow-hidden rounded-3xl aspect-[4/3] press shadow-ios"
                 >
-                  {/* Gradient bg */}
                   <div className={cn("absolute inset-0 bg-gradient-to-br", catBg(cat.name))} />
-                  {/* Decorative circle */}
-                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/15 rounded-full" />
-                  <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-white/10 rounded-full" />
-                  {/* Content */}
+                  {/* shine overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent" />
+                  {/* blobs */}
+                  <div className="absolute -top-5 -right-5 w-24 h-24 bg-white/15 rounded-full blur-sm" />
+                  <div className="absolute -bottom-5 -left-5 w-20 h-20 bg-white/10 rounded-full blur-sm" />
+                  {/* content */}
                   <div className="relative z-10 flex flex-col justify-between h-full p-3.5">
-                    <div className="text-4xl">{catEmoji(cat.name)}</div>
+                    <div className="text-4xl drop-shadow-md">{catEmoji(cat.name)}</div>
                     <div>
-                      <div className="font-display font-bold text-white text-[15px] leading-tight">{cat.name}</div>
+                      <div className="font-display font-bold text-white text-[15px] leading-tight drop-shadow">{cat.name}</div>
                       {cat.productCount && (
                         <div className="text-white/70 text-[11px] mt-0.5">{cat.productCount} ta mahsulot</div>
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-white/50" />
+                  <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-white/60" />
                 </button>
               ))}
             </div>
@@ -229,10 +229,10 @@ export default function Catalog() {
           {/* "View all" CTA */}
           <button
             onClick={() => { hapticFeedback("selection"); setActiveCategory("__all__"); }}
-            className="w-full flex items-center justify-between bg-muted/50 border border-border/60 rounded-2xl px-4 py-3.5 active:scale-[0.99] transition-transform"
+            className="w-full flex items-center justify-between glass-card rounded-2xl px-4 py-3.5 press shadow-ios-sm"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
                 <Package className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
@@ -320,13 +320,12 @@ export default function Catalog() {
           className="fixed inset-0 z-50 flex flex-col justify-end"
           onClick={() => setShowSortSheet(false)}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
           <div
-            className="relative bg-background rounded-t-3xl px-4 pt-3 pb-8 max-w-[430px] w-full mx-auto"
+            className="relative glass rounded-t-[32px] px-4 pt-3 pb-10 max-w-[430px] w-full mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Handle */}
-            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            <div className="w-10 h-1 bg-foreground/20 rounded-full mx-auto mb-5" />
             <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
               <ArrowUpDown className="w-5 h-5 text-primary" /> Saralash
             </h3>
@@ -340,15 +339,17 @@ export default function Catalog() {
                     setShowSortSheet(false);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all text-sm font-medium",
+                    "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold press",
                     sortKey === opt.key
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-muted/40 border-border/50 text-foreground"
+                      ? "bg-primary text-white shadow-ios-sm shadow-primary/40"
+                      : "glass-card text-foreground"
                   )}
                 >
                   {opt.label}
                   {sortKey === opt.key && (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div className="w-4 h-4 rounded-full bg-white/30 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    </div>
                   )}
                 </button>
               ))}
