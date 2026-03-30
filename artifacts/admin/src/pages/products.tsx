@@ -1,30 +1,37 @@
 import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Plus, Edit2, Trash2, Eye, Star, X, Upload,
-  ImageIcon, ChevronDown, Check, Package,
+  ImageIcon, ChevronDown, Check, Package, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function fmt(n: number) { return n.toLocaleString("ru-RU") + " so'm"; }
 
-// ── Types ────────────────────────────────────────────────────────────────────
-interface Product {
-  id: number;
+// ── API types ─────────────────────────────────────────────────────────────────
+interface ApiProduct {
+  id: string;
   name: string;
-  category: string;
-  price: number;
-  oldPrice: number | null;
-  stock: number;
-  rating: number;
-  reviews: number;
-  status: "faol" | "tugagan" | "kutilmoqda";
-  img: string;
-  store: string;
-  description: string;
-  specs: Record<string, string>;
+  price: string;
+  oldPrice: string | null;
+  description: string | null;
+  images: string[] | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  storeId: string;
+  storeName: string | null;
+  rating: string;
+  reviewCount: number;
+  isFeatured: boolean;
+  isTopSelling: boolean;
+  discount: number | null;
+  salesCount: number;
 }
 
-// ── Category config ───────────────────────────────────────────────────────────
+interface ApiCategory { id: string; name: string; icon: string | null; }
+interface ApiStore    { id: string; name: string; }
+
+// ── Category config (for spec fields only) ────────────────────────────────────
 interface FieldDef { key: string; label: string; type: "text" | "number" | "select" | "toggle"; options?: string[] }
 
 const CATEGORIES: { name: string; emoji: string; fields: FieldDef[] }[] = [
@@ -129,45 +136,54 @@ const CATEGORIES: { name: string; emoji: string; fields: FieldDef[] }[] = [
   },
 ];
 
-const CAT_NAMES = CATEGORIES.map((c) => c.name);
-
-const STATUS_CLASS: Record<string, string> = {
-  faol:       "badge badge-success",
-  tugagan:    "badge badge-danger",
-  kutilmoqda: "badge badge-warning",
-};
-
-// ── Default products (seeded once) ───────────────────────────────────────────
-const SEED: Product[] = [
-  { id: 1, name: "Zamonaviy Lusso Yotoq To'plami",   category: "Yotoqxona",  price: 12500000, oldPrice: 15000000, stock: 12, rating: 4.8, reviews: 124, status: "faol",      img: "https://images.unsplash.com/photo-1505693314120-0d443867891c?w=200&q=70", store: "Comfort Home", description: "Premium yotoq xona to'plami, zamona dizayni.", specs: { material: "Eman", size: "160x200", storage: "Ha", mattress: "Yo'q" } },
-  { id: 2, name: "Premium Oshxona Mebellari To'plami", category: "Oshxonalar", price: 28000000, oldPrice: null,     stock: 5,  rating: 4.9, reviews: 89,  status: "faol",      img: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&q=70", store: "Kitchen Pro", description: "Zamonaviy oshxona garnituri, akril frontlar.", specs: { material: "Akril", shape: "L-shakl", countertop: "Granit", appliances: "Ha" } },
-  { id: 3, name: "Zamonaviy Shkaf 2 qanotli Eman",   category: "Shkaflar",   price: 9980000,  oldPrice: 11500000, stock: 0,  rating: 4.6, reviews: 56,  status: "tugagan",   img: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=200&q=70", store: "Comfort Home", description: "Sifatli eman yog'ochidan yasalgan 2 qanotli shkaf.", specs: { material: "Eman", doors: "2", height: "220", width: "120", mirror: "Ha" } },
-];
-
-function loadProducts(): Product[] {
-  try {
-    const raw = localStorage.getItem("abz_admin_products");
-    return raw ? JSON.parse(raw) : SEED;
-  } catch { return SEED; }
-}
-function saveProducts(list: Product[]) {
-  try { localStorage.setItem("abz_admin_products", JSON.stringify(list)); } catch {}
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function fetchProducts(): Promise<ApiProduct[]> {
+  const r = await fetch("/api/products?limit=100");
+  if (!r.ok) throw new Error("Mahsulotlar yuklanmadi");
+  const data = await r.json();
+  return data.products ?? [];
 }
 
-// ── Blank form ────────────────────────────────────────────────────────────────
-function blankForm() {
-  return {
-    name: "",
-    category: CATEGORIES[0].name,
-    price: "",
-    oldPrice: "",
-    stock: "",
-    store: "",
-    status: "faol" as const,
-    description: "",
-    specs: {} as Record<string, string>,
-    img: "",
-  };
+async function fetchCategories(): Promise<ApiCategory[]> {
+  const r = await fetch("/api/categories");
+  if (!r.ok) return [];
+  const data = await r.json();
+  return data.categories ?? [];
+}
+
+async function fetchStores(): Promise<ApiStore[]> {
+  const r = await fetch("/api/stores");
+  if (!r.ok) return [];
+  const data = await r.json();
+  return data.stores ?? [];
+}
+
+async function createProduct(body: Record<string, unknown>): Promise<ApiProduct> {
+  const r = await fetch("/api/products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Xato yuz berdi");
+  }
+  return r.json();
+}
+
+async function updateProduct(id: string, body: Record<string, unknown>): Promise<ApiProduct> {
+  const r = await fetch(`/api/products/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error("Saqlashda xato yuz berdi");
+  return r.json();
+}
+
+async function deleteProduct(id: string): Promise<void> {
+  const r = await fetch(`/api/products/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error("O'chirishda xato");
 }
 
 // ── Image upload field ────────────────────────────────────────────────────────
@@ -212,11 +228,7 @@ function ImageUpload({ value, onChange }: { value: string; onChange: (v: string)
         <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
       </div>
       {value && (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="mt-2 text-xs text-destructive hover:underline"
-        >
+        <button type="button" onClick={() => onChange("")} className="mt-2 text-xs text-destructive hover:underline">
           Rasmni o'chirish
         </button>
       )}
@@ -233,15 +245,9 @@ function SpecField({ field, value, onChange }: { field: FieldDef; value: string;
         <button
           type="button"
           onClick={() => onChange(value === "Ha" ? "Yo'q" : "Ha")}
-          className={cn(
-            "w-11 h-6 rounded-full transition-all relative",
-            value === "Ha" ? "bg-primary" : "bg-border"
-          )}
+          className={cn("w-11 h-6 rounded-full transition-all relative", value === "Ha" ? "bg-primary" : "bg-border")}
         >
-          <span className={cn(
-            "absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all",
-            value === "Ha" ? "left-6" : "left-1"
-          )} />
+          <span className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all", value === "Ha" ? "left-6" : "left-1")} />
         </button>
       </div>
     );
@@ -279,73 +285,134 @@ function SpecField({ field, value, onChange }: { field: FieldDef; value: string;
 }
 
 // ── Product form modal ────────────────────────────────────────────────────────
+interface ProductForm {
+  name: string;
+  category: string;
+  price: string;
+  oldPrice: string;
+  storeId: string;
+  isFeatured: boolean;
+  description: string;
+  specs: Record<string, string>;
+  img: string;
+}
+
+function blankForm(): ProductForm {
+  return {
+    name: "", category: CATEGORIES[0].name, price: "", oldPrice: "",
+    storeId: "", isFeatured: true, description: "", specs: {}, img: "",
+  };
+}
+
 function ProductModal({
   product,
   onClose,
-  onSave,
+  onSaved,
 }: {
-  product: Partial<Product> | null;
+  product: ApiProduct | null;
   onClose: () => void;
-  onSave: (p: Product) => void;
+  onSaved: () => void;
 }) {
+  const qc = useQueryClient();
   const isEdit = !!product?.id;
-  const [form, setForm] = useState(() => product?.id ? {
-    name:        product.name ?? "",
-    category:    product.category ?? CATEGORIES[0].name,
-    price:       String(product.price ?? ""),
-    oldPrice:    String(product.oldPrice ?? ""),
-    stock:       String(product.stock ?? ""),
-    store:       product.store ?? "",
-    status:      (product.status ?? "faol") as "faol" | "tugagan" | "kutilmoqda",
-    description: product.description ?? "",
-    specs:       product.specs ?? {},
-    img:         product.img ?? "",
-  } : blankForm());
+
+  const { data: stores = [] } = useQuery({ queryKey: ["stores"], queryFn: fetchStores });
+  const { data: apiCategories = [] } = useQuery({ queryKey: ["categories-list"], queryFn: fetchCategories });
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const [form, setForm] = useState<ProductForm>(() => {
+    if (product) {
+      const catName = CATEGORIES.find((c) => c.name === product.categoryName)?.name ?? CATEGORIES[0].name;
+      return {
+        name: product.name,
+        category: catName,
+        price: product.price,
+        oldPrice: product.oldPrice ?? "",
+        storeId: product.storeId ?? "",
+        isFeatured: product.isFeatured,
+        description: product.description ?? "",
+        specs: {},
+        img: product.images?.[0] ?? "",
+      };
+    }
+    return blankForm();
+  });
+
+  // Auto-select first store if only one
+  useEffect(() => {
+    if (!form.storeId && stores.length === 1) {
+      setForm((f) => ({ ...f, storeId: stores[0].id }));
+    }
+  }, [stores]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const catDef = CATEGORIES.find((c) => c.name === form.category)!;
 
-  const setSpec = (key: string, val: string) => setForm((f) => ({ ...f, specs: { ...f.specs, [key]: val } }));
+  const setSpec = (key: string, val: string) =>
+    setForm((f) => ({ ...f, specs: { ...f.specs, [key]: val } }));
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim())     e.name  = "Mahsulot nomi kiritilsin";
-    if (!form.price)           e.price = "Narx kiritilsin";
-    if (!form.stock)           e.stock = "Ombordagi miqdor kiritilsin";
-    if (!form.store.trim())    e.store = "Do'kon nomi kiritilsin";
-    if (!form.img)             e.img   = "Rasm yuklash majburiy";
+    if (!form.name.trim()) e.name = "Mahsulot nomi kiritilsin";
+    if (!form.price)       e.price = "Narx kiritilsin";
+    if (!form.storeId)     e.storeId = "Do'kon tanlansin";
+    if (!form.img)         e.img = "Rasm yuklash majburiy";
     return e;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
-    const saved: Product = {
-      id:          product?.id ?? Date.now(),
-      name:        form.name.trim(),
-      category:    form.category,
-      price:       Number(form.price),
-      oldPrice:    form.oldPrice ? Number(form.oldPrice) : null,
-      stock:       Number(form.stock),
-      store:       form.store.trim(),
-      status:      form.status,
-      description: form.description.trim(),
-      specs:       form.specs,
-      img:         form.img,
-      rating:      product?.rating ?? 0,
-      reviews:     product?.reviews ?? 0,
+    // Map category name → categoryId
+    const matchedCat = apiCategories.find(
+      (c) => c.name.toLowerCase() === form.category.toLowerCase()
+    );
+
+    // Build description with specs appended
+    const specLines = Object.entries(form.specs)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(", ");
+    const fullDesc = form.description.trim()
+      ? form.description.trim() + (specLines ? `\n\nXususiyatlar: ${specLines}` : "")
+      : specLines || null;
+
+    const body: Record<string, unknown> = {
+      name: form.name.trim(),
+      price: form.price,
+      oldPrice: form.oldPrice || null,
+      description: fullDesc,
+      images: form.img ? [form.img] : [],
+      categoryId: matchedCat?.id ?? null,
+      storeId: form.storeId,
+      isFeatured: form.isFeatured,
+      isTopSelling: false,
     };
-    onSave(saved);
+
+    setSaving(true);
+    setSaveError("");
+    try {
+      if (isEdit && product) {
+        await updateProduct(product.id, body);
+      } else {
+        await createProduct(body);
+      }
+      await qc.invalidateQueries({ queryKey: ["admin-products"] });
+      onSaved();
+    } catch (err) {
+      setSaveError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Panel */}
       <div className="relative ml-auto w-full max-w-2xl h-full bg-background shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-card shrink-0">
@@ -358,11 +425,11 @@ function ProductModal({
           </button>
         </div>
 
-        {/* Scrollable body */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Section: Kategoriya */}
+            {/* 1. Kategoriya */}
             <div className="bg-card border border-border/60 rounded-2xl p-5 space-y-4">
               <h3 className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wide">1. Kategoriya</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -386,18 +453,20 @@ function ProductModal({
               </div>
             </div>
 
-            {/* Section: Rasm */}
+            {/* 2. Rasm */}
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <h3 className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-4">2. Rasm</h3>
-              <ImageUpload value={form.img} onChange={(v) => { setForm((f) => ({ ...f, img: v })); setErrors((e) => ({ ...e, img: "" })); }} />
+              <ImageUpload
+                value={form.img}
+                onChange={(v) => { setForm((f) => ({ ...f, img: v })); setErrors((e) => ({ ...e, img: "" })); }}
+              />
               {errors.img && <p className="text-destructive text-xs mt-1">{errors.img}</p>}
             </div>
 
-            {/* Section: Asosiy ma'lumotlar */}
+            {/* 3. Asosiy ma'lumotlar */}
             <div className="bg-card border border-border/60 rounded-2xl p-5 space-y-4">
               <h3 className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wide">3. Asosiy ma'lumotlar</h3>
 
-              {/* Name */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">Mahsulot nomi *</label>
                 <input
@@ -410,7 +479,6 @@ function ProductModal({
                 {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
               </div>
 
-              {/* Price row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">Narx (so'm) *</label>
@@ -435,70 +503,61 @@ function ProductModal({
                 </div>
               </div>
 
-              {/* Stock + Store */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Ombordagi soni *</label>
-                  <input
-                    type="number"
-                    value={form.stock}
-                    onChange={(e) => { setForm((f) => ({ ...f, stock: e.target.value })); setErrors((er) => ({ ...er, stock: "" })); }}
-                    placeholder="10"
-                    className="w-full h-10 px-3 bg-muted/40 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                  {errors.stock && <p className="text-destructive text-xs mt-1">{errors.stock}</p>}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Do'kon nomi *</label>
-                  <input
-                    type="text"
-                    value={form.store}
-                    onChange={(e) => { setForm((f) => ({ ...f, store: e.target.value })); setErrors((er) => ({ ...er, store: "" })); }}
-                    placeholder="Comfort Home"
-                    className="w-full h-10 px-3 bg-muted/40 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                  {errors.store && <p className="text-destructive text-xs mt-1">{errors.store}</p>}
-                </div>
+              {/* Store dropdown */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Do'kon *</label>
+                {stores.length === 0 ? (
+                  <div className="flex items-center gap-2 h-10 px-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-700">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Do'konlar topilmadi. Avval "Do'konlar" bo'limida do'kon yarating.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={form.storeId}
+                      onChange={(e) => { setForm((f) => ({ ...f, storeId: e.target.value })); setErrors((er) => ({ ...er, storeId: "" })); }}
+                      className="w-full h-10 pl-3 pr-8 bg-muted/40 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                    >
+                      <option value="">Do'konni tanlang...</option>
+                      {stores.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  </div>
+                )}
+                {errors.storeId && <p className="text-destructive text-xs mt-1">{errors.storeId}</p>}
               </div>
 
-              {/* Status */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Holat</label>
-                <div className="flex gap-2">
-                  {(["faol","tugagan","kutilmoqda"] as const).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, status: s }))}
-                      className={cn(
-                        "flex-1 h-9 rounded-xl text-xs font-semibold border transition-all capitalize",
-                        form.status === s
-                          ? s === "faol" ? "bg-emerald-500 text-white border-emerald-500"
-                            : s === "tugagan" ? "bg-destructive text-white border-destructive"
-                            : "bg-amber-500 text-white border-amber-500"
-                          : "bg-muted border-border/60 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {s === "faol" ? "Faol" : s === "tugagan" ? "Tugagan" : "Kutilmoqda"}
-                    </button>
-                  ))}
+              {/* Featured toggle */}
+              <div className="flex items-center justify-between py-2.5 px-3 bg-muted/40 rounded-xl">
+                <div>
+                  <span className="text-sm font-medium">Bosh sahifada ko'rsatish</span>
+                  <p className="text-xs text-muted-foreground">Yoqilsa mahsulot bosh sahifada "Tavsiya etilgan" bo'limida chiqadi</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, isFeatured: !f.isFeatured }))}
+                  className={cn("w-11 h-6 rounded-full transition-all relative shrink-0 ml-3", form.isFeatured ? "bg-primary" : "bg-border")}
+                >
+                  <span className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all", form.isFeatured ? "left-6" : "left-1")} />
+                </button>
               </div>
             </div>
 
-            {/* Section: Description */}
+            {/* 4. Tavsif */}
             <div className="bg-card border border-border/60 rounded-2xl p-5 space-y-3">
               <h3 className="font-display font-semibold text-sm text-muted-foreground uppercase tracking-wide">4. Tavsif</h3>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 rows={4}
-                placeholder={`${catDef.name} haqida to'liq ma'lumot yozing: xususiyatlari, afzalliklari, ishlab chiqaruvchi...`}
+                placeholder={`${catDef.name} haqida to'liq ma'lumot yozing...`}
                 className="w-full px-3 py-2.5 bg-muted/40 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
             </div>
 
-            {/* Section: Category-specific specs */}
+            {/* 5. Xususiyatlar */}
             <div className="bg-card border border-border/60 rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">{catDef.emoji}</span>
@@ -519,6 +578,13 @@ function ProductModal({
               </div>
             </div>
 
+            {saveError && (
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {saveError}
+              </div>
+            )}
+
           </form>
         </div>
 
@@ -534,9 +600,10 @@ function ProductModal({
           <button
             type="submit"
             form="product-form"
-            className="flex-1 h-11 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30"
+            disabled={saving}
+            className="flex-1 h-11 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30 disabled:opacity-60"
           >
-            {isEdit ? "Saqlash" : "Mahsulot qo'shish"}
+            {saving ? "Saqlanmoqda..." : isEdit ? "Saqlash" : "Mahsulot qo'shish"}
           </button>
         </div>
       </div>
@@ -545,8 +612,9 @@ function ProductModal({
 }
 
 // ── View modal ────────────────────────────────────────────────────────────────
-function ViewModal({ product, onClose, onEdit }: { product: Product; onClose: () => void; onEdit: () => void }) {
-  const catDef = CATEGORIES.find((c) => c.name === product.category);
+function ViewModal({ product, onClose, onEdit }: { product: ApiProduct; onClose: () => void; onEdit: () => void }) {
+  const catDef = CATEGORIES.find((c) => c.name === product.categoryName);
+  const img = product.images?.[0];
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -556,56 +624,31 @@ function ViewModal({ product, onClose, onEdit }: { product: Product; onClose: ()
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {product.img && (
-            <img src={product.img} alt={product.name} className="w-full h-52 object-cover" />
-          )}
+          {img && <img src={img} alt={product.name} className="w-full h-52 object-cover" />}
           <div className="p-5 space-y-4">
             <div>
-              <span className="badge badge-primary">{product.category}</span>
+              {product.categoryName && <span className="badge badge-primary">{catDef?.emoji ?? "📦"} {product.categoryName}</span>}
               <h3 className="font-display font-bold text-xl mt-2">{product.name}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{product.store}</p>
+              <p className="text-muted-foreground text-sm mt-1">{product.storeName}</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <div>
-                <div className="font-bold text-lg text-primary">{fmt(product.price)}</div>
-                {product.oldPrice && <div className="text-xs text-muted-foreground line-through">{fmt(product.oldPrice)}</div>}
+                <div className="font-bold text-lg text-primary">{fmt(Number(product.price))}</div>
+                {product.oldPrice && <div className="text-xs text-muted-foreground line-through">{fmt(Number(product.oldPrice))}</div>}
               </div>
-              <span className={STATUS_CLASS[product.status]}>{product.status}</span>
+              {product.isFeatured && <span className="badge badge-info">⭐ Tavsiya etilgan</span>}
               <div className="ml-auto flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                <span className="font-semibold text-sm">{product.rating}</span>
-                <span className="text-muted-foreground text-xs">({product.reviews})</span>
+                <span className="font-semibold text-sm">{Number(product.rating).toFixed(1)}</span>
+                <span className="text-muted-foreground text-xs">({product.reviewCount})</span>
               </div>
             </div>
             {product.description && (
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tavsif</h4>
-                <p className="text-sm leading-relaxed">{product.description}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
               </div>
             )}
-            {catDef && Object.keys(product.specs).length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{catDef.emoji} {product.category} xususiyatlari</h4>
-                <div className="space-y-1.5">
-                  {catDef.fields.filter(f => product.specs[f.key]).map((f) => (
-                    <div key={f.key} className="flex items-center justify-between py-1.5 px-3 bg-muted/40 rounded-lg text-sm">
-                      <span className="text-muted-foreground">{f.label}</span>
-                      <span className="font-semibold">{product.specs[f.key]}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-muted/40 rounded-xl p-3 text-center">
-                <div className="font-bold text-lg">{product.stock}</div>
-                <div className="text-xs text-muted-foreground">Omborda</div>
-              </div>
-              <div className="bg-muted/40 rounded-xl p-3 text-center">
-                <div className="font-bold text-lg">{product.reviews}</div>
-                <div className="text-xs text-muted-foreground">Izohlar</div>
-              </div>
-            </div>
           </div>
         </div>
         <div className="shrink-0 border-t border-border/60 bg-card px-5 py-4 flex gap-3">
@@ -619,36 +662,35 @@ function ViewModal({ product, onClose, onEdit }: { product: Product; onClose: ()
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Products() {
-  const [products, setProducts] = useState<Product[]>(() => loadProducts());
-  const [search, setSearch]     = useState("");
-  const [catFilter, setCatFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [modal, setModal]       = useState<"add" | "edit" | "view" | null>(null);
-  const [active, setActive]     = useState<Product | null>(null);
+  const qc = useQueryClient();
+  const [search, setSearch]         = useState("");
+  const [catFilter, setCatFilter]   = useState("all");
+  const [modal, setModal]           = useState<"add" | "edit" | "view" | null>(null);
+  const [active, setActive]         = useState<ApiProduct | null>(null);
+
+  const { data: products = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-products"],
+    queryFn: fetchProducts,
+    refetchInterval: 60_000,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+  });
 
   const filtered = products.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat    = catFilter === "all" || p.category === catFilter;
-    const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchSearch && matchCat && matchStatus;
+    const matchCat = catFilter === "all" || p.categoryName === catFilter;
+    return matchSearch && matchCat;
   });
 
-  const handleSave = (p: Product) => {
-    setProducts((prev) => {
-      const next = prev.some((x) => x.id === p.id)
-        ? prev.map((x) => x.id === p.id ? p : x)
-        : [p, ...prev];
-      saveProducts(next);
-      return next;
-    });
-    setModal(null);
-    setActive(null);
+  const handleDelete = (id: string) => {
+    if (!confirm("Mahsulotni o'chirishni tasdiqlaysizmi?")) return;
+    deleteMutation.mutate(id);
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Mahsulotni o'chirishni tasdiqlaysizmi?")) return;
-    setProducts((prev) => { const next = prev.filter((p) => p.id !== id); saveProducts(next); return next; });
-  };
+  const closeModal = () => { setModal(null); setActive(null); };
 
   return (
     <div>
@@ -658,12 +700,20 @@ export default function Products() {
           <h1 className="font-display font-bold text-2xl">Mahsulotlar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{products.length} ta mahsulot</p>
         </div>
-        <button
-          onClick={() => { setActive(null); setModal("add"); }}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors self-start sm:self-auto shadow-sm shadow-primary/30"
-        >
-          <Plus className="w-4 h-4" /> Mahsulot qo'shish
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-1.5 bg-muted border border-border/60 text-foreground px-3 py-2 rounded-xl text-sm font-semibold hover:bg-muted/80 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => { setActive(null); setModal("add"); }}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30"
+          >
+            <Plus className="w-4 h-4" /> Mahsulot qo'shish
+          </button>
+        </div>
       </div>
 
       {/* Category quick-filter */}
@@ -677,7 +727,8 @@ export default function Products() {
           Barchasi ({products.length})
         </button>
         {CATEGORIES.map((c) => {
-          const count = products.filter((p) => p.category === c.name).length;
+          const count = products.filter((p) => p.categoryName === c.name).length;
+          if (count === 0) return null;
           return (
             <button
               key={c.name}
@@ -692,33 +743,32 @@ export default function Products() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Mahsulot qidirish..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 h-9 bg-card border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-9 px-3 bg-card border border-border/60 rounded-xl text-sm focus:outline-none"
-        >
-          <option value="all">Barcha holat</option>
-          <option value="faol">Faol</option>
-          <option value="tugagan">Tugagan</option>
-          <option value="kutilmoqda">Kutilmoqda</option>
-        </select>
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="search"
+          placeholder="Mahsulot qidirish..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-4 h-9 bg-card border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
       </div>
 
       {/* Table */}
       <div className="bg-card border border-border/60 rounded-2xl overflow-hidden shadow-sm">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 text-muted-foreground gap-3">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Yuklanmoqda...</span>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <AlertCircle className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">Mahsulotlarni yuklashda xato</p>
+            <button onClick={() => refetch()} className="mt-3 text-xs text-primary hover:underline">Qayta urinish</button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Package className="w-10 h-10 mb-3 opacity-30" />
             <p className="text-sm font-medium">Mahsulotlar topilmadi</p>
@@ -732,51 +782,51 @@ export default function Products() {
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Mahsulot</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden md:table-cell">Kategoriya</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Narx</th>
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Ombor</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden lg:table-cell">Reyting</th>
-                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Holat</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Ko'rinish</th>
                   <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Amal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
                 {filtered.map((p) => {
-                  const catEmoji = CATEGORIES.find((c) => c.name === p.category)?.emoji ?? "📦";
+                  const catEmoji = CATEGORIES.find((c) => c.name === p.categoryName)?.emoji ?? "📦";
+                  const img = p.images?.[0];
                   return (
                     <tr key={p.id} className="table-row-hover">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          {p.img ? (
-                            <img src={p.img} alt={p.name} className="w-10 h-10 rounded-xl object-cover bg-muted shrink-0" />
+                          {img ? (
+                            <img src={img} alt={p.name} className="w-10 h-10 rounded-xl object-cover bg-muted shrink-0" />
                           ) : (
                             <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-xl shrink-0">{catEmoji}</div>
                           )}
                           <div>
                             <div className="font-semibold line-clamp-1 max-w-[200px]">{p.name}</div>
-                            <div className="text-xs text-muted-foreground">{p.store}</div>
+                            <div className="text-xs text-muted-foreground">{p.storeName}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="badge badge-primary">{catEmoji} {p.category}</span>
+                        {p.categoryName
+                          ? <span className="badge badge-primary">{catEmoji} {p.categoryName}</span>
+                          : <span className="text-muted-foreground text-xs">—</span>
+                        }
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-semibold">{fmt(p.price)}</div>
-                        {p.oldPrice && <div className="text-xs text-muted-foreground line-through">{fmt(p.oldPrice)}</div>}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className={cn("font-semibold", p.stock === 0 ? "text-destructive" : p.stock < 5 ? "text-amber-600" : "text-foreground")}>
-                          {p.stock} ta
-                        </span>
+                        <div className="font-semibold">{fmt(Number(p.price))}</div>
+                        {p.oldPrice && <div className="text-xs text-muted-foreground line-through">{fmt(Number(p.oldPrice))}</div>}
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <div className="flex items-center gap-1">
                           <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                          <span className="font-semibold">{p.rating || "—"}</span>
-                          {p.reviews > 0 && <span className="text-muted-foreground text-xs">({p.reviews})</span>}
+                          <span className="font-semibold">{Number(p.rating).toFixed(1) || "—"}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={STATUS_CLASS[p.status]}>{p.status}</span>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        {p.isFeatured
+                          ? <span className="badge badge-info">⭐ Tavsiya</span>
+                          : <span className="badge badge-muted">Oddiy</span>
+                        }
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
@@ -794,7 +844,8 @@ export default function Products() {
                           </button>
                           <button
                             onClick={() => handleDelete(p.id)}
-                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors"
+                            disabled={deleteMutation.isPending}
+                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-50"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -816,14 +867,14 @@ export default function Products() {
       {(modal === "add" || modal === "edit") && (
         <ProductModal
           product={modal === "edit" ? active : null}
-          onClose={() => { setModal(null); setActive(null); }}
-          onSave={handleSave}
+          onClose={closeModal}
+          onSaved={closeModal}
         />
       )}
       {modal === "view" && active && (
         <ViewModal
           product={active}
-          onClose={() => { setModal(null); setActive(null); }}
+          onClose={closeModal}
           onEdit={() => setModal("edit")}
         />
       )}
