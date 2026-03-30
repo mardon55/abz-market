@@ -1,70 +1,318 @@
 import { useState } from "react";
-import { Search, Eye, CheckCircle, XCircle, Truck, Clock, AlertCircle, Download } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Search, Eye, CheckCircle, XCircle, Truck, Clock,
+  X, Phone, MapPin, CreditCard, Package, RefreshCw,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function fmt(n: number) { return n.toLocaleString("ru-RU"); }
+// ── Types ─────────────────────────────────────────────────────────────────────
+type OrderStatus = "new" | "accepted" | "shipped" | "delivered" | "cancelled";
 
-const ORDERS = [
-  { id: "#ORD-1042", customer: "Akmal Rajabov",    phone: "+998 90 123 45 67", product: "Zamonaviy Shkaf",        amount: 12500000, status: "yangi",    date: "2025-01-15", city: "Toshkent",   items: 1 },
-  { id: "#ORD-1041", customer: "Dilnoza Yusupova",  phone: "+998 91 234 56 78", product: "Oshxona to'plami",      amount: 28000000, status: "jarayonda", date: "2025-01-15", city: "Samarqand",  items: 3 },
-  { id: "#ORD-1040", customer: "Sardor Ismoilov",   phone: "+998 93 345 67 89", product: "Premium Krovatlar",      amount: 15600000, status: "yetkazildi", date: "2025-01-14", city: "Toshkent",   items: 2 },
-  { id: "#ORD-1039", customer: "Nodira Hasanova",   phone: "+998 94 456 78 90", product: "Komod 4-tortmachali",   amount: 4200000,  status: "bekor",    date: "2025-01-14", city: "Namangan",   items: 1 },
-  { id: "#ORD-1038", customer: "Jamshid Mirzayev",  phone: "+998 95 567 89 01", product: "Kutubxona javoni",       amount: 7800000,  status: "yetkazildi", date: "2025-01-13", city: "Andijon",    items: 1 },
-  { id: "#ORD-1037", customer: "Maftuna Rahimova",  phone: "+998 97 678 90 12", product: "Divan L-shakl",         amount: 18500000, status: "jarayonda", date: "2025-01-13", city: "Buxoro",     items: 1 },
-  { id: "#ORD-1036", customer: "Bobur Nazarov",     phone: "+998 98 789 01 23", product: "Oshxona Stoli to'plami", amount: 8900000, status: "yangi",    date: "2025-01-13", city: "Toshkent",   items: 5 },
-  { id: "#ORD-1035", customer: "Zulfiya Qodirov",   phone: "+998 90 890 12 34", product: "Yotoq xona to'plami",   amount: 35000000, status: "yetkazildi", date: "2025-01-12", city: "Farg'ona",   items: 4 },
-];
+interface OrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  productImage: string | null;
+  quantity: number;
+  price: string;
+  color: string | null;
+}
 
-const STATUS: Record<string, { label: string; class: string; icon: any }> = {
-  yangi:      { label: "Yangi",      class: "badge badge-primary", icon: Clock },
-  jarayonda:  { label: "Jarayonda",  class: "badge badge-warning", icon: Truck },
-  yetkazildi: { label: "Yetkazildi", class: "badge badge-success", icon: CheckCircle },
-  bekor:      { label: "Bekor",      class: "badge badge-danger",  icon: XCircle },
+interface Order {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  comment: string | null;
+  paymentMethod: string;
+  totalPrice: string;
+  createdAt: string;
+  storeName: string | null;
+  items: OrderItem[];
+}
+
+// ── Status config ─────────────────────────────────────────────────────────────
+const STATUS: Record<OrderStatus, { label: string; badgeClass: string; icon: any; color: string }> = {
+  new:       { label: "Yangi",           badgeClass: "badge badge-primary", icon: Clock,        color: "text-violet-600" },
+  accepted:  { label: "Qabul qilindi",   badgeClass: "badge badge-warning", icon: CheckCircle,  color: "text-amber-600" },
+  shipped:   { label: "Yuborildi",       badgeClass: "badge badge-info",    icon: Truck,        color: "text-blue-600" },
+  delivered: { label: "Yetkazildi",      badgeClass: "badge badge-success", icon: CheckCircle,  color: "text-emerald-600" },
+  cancelled: { label: "Bekor",           badgeClass: "badge badge-danger",  icon: XCircle,      color: "text-red-600" },
 };
 
-export default function Orders() {
-  const [search, setSearch]   = useState("");
-  const [status, setStatus]   = useState("all");
-  const [selected, setSelected] = useState<string | null>(null);
+// Status transitions: what buttons to show for each current status
+const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
+  new:       ["accepted", "cancelled"],
+  accepted:  ["shipped",  "cancelled"],
+  shipped:   ["delivered","cancelled"],
+  delivered: [],
+  cancelled: [],
+};
 
-  const filtered = ORDERS.filter((o) => {
-    const matchSearch = !search || o.customer.toLowerCase().includes(search.toLowerCase()) || o.id.includes(search);
-    const matchStatus = status === "all" || o.status === status;
-    return matchSearch && matchStatus;
+const PAY_LABEL: Record<string, string> = {
+  cash:        "Naqd pul",
+  card:        "Karta orqali",
+  installment: "Bo'lib to'lash",
+};
+
+function fmt(n: number) { return n.toLocaleString("ru-RU") + " so'm"; }
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleString("uz-UZ", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function fetchOrders(status?: string): Promise<{ orders: Order[] }> {
+  const url = status && status !== "all" ? `/api/orders?status=${status}` : "/api/orders";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Buyurtmalarni yuklashda xato");
+  return res.json();
+}
+
+async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+  const res = await fetch(`/api/orders/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Holatni yangilashda xato");
+  return res.json();
+}
+
+// ── Order detail modal ────────────────────────────────────────────────────────
+function OrderModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const S = STATUS[order.status] ?? STATUS.new;
+  const nextStatuses = NEXT_STATUSES[order.status] ?? [];
+
+  const mutation = useMutation({
+    mutationFn: ({ status }: { status: OrderStatus }) => updateOrderStatus(order.id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      onClose();
+    },
   });
 
-  const counts = ORDERS.reduce((acc, o) => {
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative ml-auto w-full max-w-lg h-full bg-background shadow-2xl flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-card shrink-0">
+          <div>
+            <h2 className="font-display font-bold text-base">Buyurtma tafsilotlari</h2>
+            <p className="font-mono text-xs text-primary mt-0.5">{order.orderNumber}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Status + date */}
+          <div className="flex items-center justify-between bg-muted/40 rounded-2xl px-4 py-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Holat</p>
+              <span className={cn("font-bold text-sm mt-0.5 inline-block", S.color)}>{S.label}</span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Sana</p>
+              <p className="text-xs font-semibold mt-0.5">{fmtDate(order.createdAt)}</p>
+            </div>
+          </div>
+
+          {/* Customer info */}
+          <div className="bg-card border border-border/60 rounded-2xl p-4 space-y-2.5">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Mijoz</h3>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">{order.customerName[0]}</span>
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{order.customerName}</p>
+                {order.storeName && <p className="text-xs text-muted-foreground">{order.storeName}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span>{order.customerPhone}</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span>{order.address}</span>
+            </div>
+            {order.comment && (
+              <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                💬 {order.comment}
+              </div>
+            )}
+          </div>
+
+          {/* Payment */}
+          <div className="flex items-center gap-3 bg-card border border-border/60 rounded-2xl px-4 py-3">
+            <CreditCard className="w-4 h-4 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">To'lov usuli</p>
+              <p className="text-sm font-semibold">{PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xs text-muted-foreground">Jami</p>
+              <p className="font-bold text-primary">{fmt(Number(order.totalPrice))}</p>
+            </div>
+          </div>
+
+          {/* Items */}
+          <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-border/40 bg-muted/30">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <Package className="w-3.5 h-3.5 inline mr-1" />Mahsulotlar ({order.items.length})
+              </h3>
+            </div>
+            <div className="divide-y divide-border/40">
+              {order.items.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  {item.productImage ? (
+                    <img src={item.productImage} alt={item.productName} className="w-10 h-10 rounded-xl object-cover bg-muted shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{item.productName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.quantity} ta × {fmt(Number(item.price))}
+                      {item.color && ` · ${item.color}`}
+                    </p>
+                  </div>
+                  <p className="font-bold text-sm shrink-0">{fmt(Number(item.price) * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Status change — only shown if transitions available */}
+          {nextStatuses.length > 0 && (
+            <div className="bg-card border border-border/60 rounded-2xl p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Holatni o'zgartirish</h3>
+              <div className="flex flex-col gap-2">
+                {nextStatuses.map((ns) => {
+                  const NS = STATUS[ns];
+                  const Icon = NS.icon;
+                  const isLoading = mutation.isPending && (mutation.variables as any)?.status === ns;
+                  return (
+                    <button
+                      key={ns}
+                      disabled={mutation.isPending}
+                      onClick={() => mutation.mutate({ status: ns })}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all",
+                        ns === "cancelled"
+                          ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                          : ns === "delivered"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10",
+                        mutation.isPending && "opacity-60 cursor-not-allowed"
+                      )}
+                    >
+                      {isLoading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                      {NS.label} deb belgilash
+                    </button>
+                  );
+                })}
+              </div>
+              {mutation.isError && (
+                <p className="text-destructive text-xs mt-2">⚠️ Xato yuz berdi. Qayta urining.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border/60 bg-card px-5 py-4">
+          <button onClick={onClose} className="w-full h-10 bg-muted rounded-xl text-sm font-semibold hover:bg-muted/80 transition-colors">
+            Yopish
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function Orders() {
+  const [search, setSearch]   = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selected, setSelected] = useState<Order | null>(null);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-orders", statusFilter],
+    queryFn: () => fetchOrders(statusFilter),
+    refetchInterval: 30_000,
+  });
+
+  const orders: Order[] = data?.orders ?? [];
+
+  const filtered = orders.filter((o) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      o.customerName.toLowerCase().includes(q) ||
+      o.orderNumber.toLowerCase().includes(q) ||
+      o.customerPhone.includes(q)
+    );
+  });
+
+  const counts = orders.reduce((acc, o) => {
     acc[o.status] = (acc[o.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
+  const TABS = [
+    { key: "all",       label: `Barchasi (${orders.length})` },
+    { key: "new",       label: `Yangi (${counts.new || 0})` },
+    { key: "accepted",  label: `Qabul (${counts.accepted || 0})` },
+    { key: "shipped",   label: `Yuborildi (${counts.shipped || 0})` },
+    { key: "delivered", label: `Yetkazildi (${counts.delivered || 0})` },
+    { key: "cancelled", label: `Bekor (${counts.cancelled || 0})` },
+  ];
+
   return (
     <div>
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="font-display font-bold text-2xl">Buyurtmalar</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{ORDERS.length} ta buyurtma</p>
+          <p className="text-muted-foreground text-sm mt-0.5">{orders.length} ta buyurtma</p>
         </div>
-        <button className="flex items-center gap-2 bg-muted border border-border/60 text-foreground px-4 py-2 rounded-xl text-sm font-semibold hover:bg-muted/80 transition-colors self-start sm:self-auto">
-          <Download className="w-4 h-4" /> Eksport
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 bg-muted border border-border/60 text-foreground px-4 py-2 rounded-xl text-sm font-semibold hover:bg-muted/80 transition-colors self-start sm:self-auto"
+        >
+          <RefreshCw className="w-4 h-4" /> Yangilash
         </button>
       </div>
 
       {/* Status filter tabs */}
       <div className="flex gap-2 flex-wrap mb-4">
-        {[
-          { key: "all", label: `Barchasi (${ORDERS.length})` },
-          { key: "yangi", label: `Yangi (${counts.yangi || 0})` },
-          { key: "jarayonda", label: `Jarayonda (${counts.jarayonda || 0})` },
-          { key: "yetkazildi", label: `Yetkazildi (${counts.yetkazildi || 0})` },
-          { key: "bekor", label: `Bekor (${counts.bekor || 0})` },
-        ].map((tab) => (
+        {TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setStatus(tab.key)}
+            onClick={() => setStatusFilter(tab.key)}
             className={cn(
               "px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all",
-              status === tab.key
+              statusFilter === tab.key
                 ? "bg-primary text-white border-primary"
                 : "bg-card border-border/60 text-muted-foreground hover:text-foreground"
             )}
@@ -79,7 +327,7 @@ export default function Orders() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           type="search"
-          placeholder="ID yoki mijoz qidirish..."
+          placeholder="Ism, ID yoki telefon..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 h-9 bg-card border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -88,69 +336,102 @@ export default function Orders() {
 
       {/* Table */}
       <div className="bg-card border border-border/60 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50 border-b border-border/60">
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ID</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Mijoz</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden md:table-cell">Mahsulot</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Summa</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Sana</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Holat</th>
-                <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Amal</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {filtered.map((o) => {
-                const S = STATUS[o.status];
-                return (
-                  <tr key={o.id} className="table-row-hover" onClick={() => setSelected(selected === o.id ? null : o.id)}>
-                    <td className="px-4 py-3">
-                      <span className="font-mono font-semibold text-primary text-xs">{o.id}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold">{o.customer}</div>
-                      <div className="text-xs text-muted-foreground">{o.city}</div>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <div className="max-w-[180px] truncate text-muted-foreground">{o.product}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-bold">{fmt(o.amount)}</div>
-                      <div className="text-xs text-muted-foreground">{o.items} ta mahsulot</div>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">{o.date}</td>
-                    <td className="px-4 py-3">
-                      <span className={S.class}>{S.label}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <button className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-violet-100 hover:text-violet-700 transition-colors" onClick={(e) => e.stopPropagation()}>
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        {o.status === "yangi" && (
-                          <button className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-emerald-100 hover:text-emerald-700 transition-colors" onClick={(e) => e.stopPropagation()}>
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-4 py-3 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{filtered.length} ta natija</span>
-          <div className="flex gap-1">
-            {[1,2,3].map((p) => (
-              <button key={p} className={cn("w-7 h-7 rounded-lg text-xs font-semibold", p === 1 ? "bg-primary text-white" : "bg-muted hover:bg-muted/80")}>{p}</button>
+        {isLoading ? (
+          <div className="space-y-0 divide-y divide-border/40">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-4 animate-pulse">
+                <div className="w-20 h-4 bg-muted rounded" />
+                <div className="flex-1 h-4 bg-muted rounded" />
+                <div className="w-24 h-4 bg-muted rounded" />
+                <div className="w-16 h-4 bg-muted rounded" />
+                <div className="w-20 h-6 bg-muted rounded-lg" />
+              </div>
             ))}
           </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mb-3">
+              <XCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <p className="font-semibold text-sm">API ga ulanishda xato</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">API server ishlamasligi mumkin</p>
+            <button onClick={() => refetch()} className="text-xs text-primary hover:underline flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Qayta urinish
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Package className="w-10 h-10 text-muted-foreground opacity-30 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Buyurtmalar yo'q</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b border-border/60">
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">ID</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Mijoz</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden md:table-cell">Mahsulot</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Summa</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Sana</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Holat</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-wide">Amal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {filtered.map((o) => {
+                  const S = STATUS[o.status] ?? STATUS.new;
+                  const Icon = S.icon;
+                  return (
+                    <tr key={o.id} className="table-row-hover cursor-pointer" onClick={() => setSelected(o)}>
+                      <td className="px-4 py-3">
+                        <span className="font-mono font-semibold text-primary text-xs">{o.orderNumber}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold">{o.customerName}</div>
+                        <div className="text-xs text-muted-foreground">{o.customerPhone}</div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <div className="max-w-[180px] truncate text-muted-foreground text-xs">
+                          {o.items[0]?.productName ?? "—"}
+                          {o.items.length > 1 && ` +${o.items.length - 1}`}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-bold">{fmt(Number(o.totalPrice))}</div>
+                        <div className="text-xs text-muted-foreground">{o.items.length} ta</div>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
+                        {fmtDate(o.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={S.badgeClass}>{S.label}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelected(o); }}
+                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-violet-100 hover:text-violet-700 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="px-4 py-3 border-t border-border/40 text-xs text-muted-foreground flex items-center justify-between">
+          <span>{filtered.length} ta natija</span>
+          <span className="text-[10px] opacity-60">Har 30 soniyada yangilanadi</span>
         </div>
       </div>
+
+      {/* Detail modal */}
+      {selected && <OrderModal order={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
