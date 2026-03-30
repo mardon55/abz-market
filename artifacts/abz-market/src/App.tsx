@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTelegram } from "@/hooks/use-telegram";
 import NotFound from "@/pages/not-found";
 
 // Pages
@@ -27,6 +29,41 @@ const queryClient = new QueryClient({
   }
 });
 
+function TelegramProvider({ children }: { children: React.ReactNode }) {
+  const { colorScheme, tg } = useTelegram();
+
+  useEffect(() => {
+    // Apply dark/light mode based on Telegram theme
+    const root = document.documentElement;
+    if (colorScheme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [colorScheme]);
+
+  useEffect(() => {
+    // Apply Telegram theme colors if available
+    if (tg?.themeParams) {
+      const { bg_color, button_color } = tg.themeParams;
+      if (button_color) {
+        document.documentElement.style.setProperty(
+          "--tg-button-color",
+          button_color
+        );
+      }
+      if (bg_color) {
+        document.documentElement.style.setProperty(
+          "--tg-bg-color",
+          bg_color
+        );
+      }
+    }
+  }, [tg]);
+
+  return <>{children}</>;
+}
+
 function Router() {
   return (
     <Switch>
@@ -42,11 +79,10 @@ function Router() {
       <Route path="/stores" component={Stores} />
       <Route path="/store/:id" component={StoreProfile} />
       <Route path="/register-store" component={RegisterStore} />
-      
-      {/* Mock fallbacks for missing paths */}
+
       <Route path="/favorites"><Redirect to="/" /></Route>
       <Route path="/order/:id"><Redirect to="/orders" /></Route>
-      
+
       <Route component={NotFound} />
     </Switch>
   );
@@ -57,7 +93,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <TelegramProvider>
+            <Router />
+          </TelegramProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

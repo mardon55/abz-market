@@ -5,6 +5,7 @@ import categoriesRouter from "./categories";
 import ordersRouter from "./orders";
 import storesRouter from "./stores";
 import analyticsRouter from "./analytics";
+import telegramRouter from "./telegram";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(categoriesRouter);
 router.use(ordersRouter);
 router.use(storesRouter);
 router.use(analyticsRouter);
+router.use(telegramRouter);
 
 export default router;
