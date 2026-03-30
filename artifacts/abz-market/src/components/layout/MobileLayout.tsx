@@ -1,9 +1,8 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Home, Search, ShoppingBag, Heart, User, ArrowLeft, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTelegram } from "@/hooks/use-telegram";
 
 interface MobileLayoutProps {
@@ -23,15 +22,23 @@ export function MobileLayout({
   showBack,
   onBack,
   headerRight,
-  transparentHeader = false
+  transparentHeader = false,
 }: MobileLayoutProps) {
   const [location, navigate] = useLocation();
   const cartItemCount = useCartStore((state) => state.getItemCount());
-  const { isTelegram, haptic } = useTelegram();
+  const { haptic } = useTelegram();
 
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains("dark")
   );
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
 
   useEffect(() => {
     if (isDark) {
@@ -43,18 +50,9 @@ export function MobileLayout({
     }
   }, [isDark]);
 
-  // Initialize theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
   const toggleDark = () => {
     haptic("selection");
-    setIsDark(prev => !prev);
+    setIsDark((v) => !v);
   };
 
   const navItems = [
@@ -96,16 +94,16 @@ export function MobileLayout({
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-
           {title && (
-            <h1 className={cn(
-              "font-display font-semibold text-[17px] flex-1 line-clamp-1",
-              showBack ? "ml-2" : "ml-0"
-            )}>
+            <h1
+              className={cn(
+                "font-display font-semibold text-[17px] flex-1 line-clamp-1",
+                showBack ? "ml-2" : "ml-0"
+              )}
+            >
               {title}
             </h1>
           )}
-
           <div className="ml-auto flex items-center gap-2">
             {headerRight}
             {!transparentHeader && (
@@ -114,33 +112,25 @@ export function MobileLayout({
                 className="p-2 rounded-full hover:bg-muted active:scale-90 transition-all"
                 aria-label="Toggle dark mode"
               >
-                {isDark
-                  ? <Sun className="w-5 h-5 text-yellow-400" />
-                  : <Moon className="w-5 h-5 text-muted-foreground" />
-                }
+                {isDark ? (
+                  <Sun className="w-5 h-5 text-yellow-400" />
+                ) : (
+                  <Moon className="w-5 h-5 text-muted-foreground" />
+                )}
               </button>
             )}
           </div>
         </header>
       )}
 
-      {/* Main Content Area */}
-      <main className={cn(
-        "flex-1 overflow-y-auto overscroll-none",
-        !hideNav && "pb-[72px]"
-      )}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="h-full"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+      {/* Main Content */}
+      <main
+        className={cn(
+          "flex-1 overflow-y-auto overscroll-none",
+          !hideNav && "pb-[72px]"
+        )}
+      >
+        {children}
       </main>
 
       {/* Bottom Navigation */}
@@ -148,20 +138,17 @@ export function MobileLayout({
         <nav className="absolute bottom-0 left-0 right-0 z-50">
           <div className="bg-background/95 backdrop-blur-md border-t border-border/60 flex items-center justify-around h-[68px] px-1">
             {navItems.map((item) => {
-              const isActive = location === item.path ||
+              const isActive =
+                location === item.path ||
                 (item.path !== "/" && location.startsWith(item.path));
               return (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item.path)}
-                  className="relative flex flex-col items-center justify-center flex-1 h-full gap-1 group active:scale-90 transition-transform duration-100"
+                  className="relative flex flex-col items-center justify-center flex-1 h-full gap-[3px] group active:scale-90 transition-transform duration-100"
                 >
                   {isActive && (
-                    <motion.div
-                      layoutId="bottom-nav-indicator"
-                      className="absolute top-0 inset-x-2 h-[2px] bg-primary rounded-b-full"
-                      transition={{ duration: 0.25 }}
-                    />
+                    <div className="absolute top-0 inset-x-3 h-[2.5px] bg-primary rounded-b-full" />
                   )}
                   <div className="relative">
                     <item.icon
@@ -178,10 +165,12 @@ export function MobileLayout({
                       </span>
                     )}
                   </div>
-                  <span className={cn(
-                    "text-[10px] font-medium transition-colors duration-200",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium transition-colors duration-200",
+                      isActive ? "text-primary font-semibold" : "text-muted-foreground"
+                    )}
+                  >
                     {item.label}
                   </span>
                 </button>
