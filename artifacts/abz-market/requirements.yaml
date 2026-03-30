@@ -1,0 +1,26 @@
+packages:
+  "framer-motion": "For page transitions, smooth modal interactions, and micro-animations"
+  "recharts": "For the analytics dashboard charts"
+  "embla-carousel-react": "For touch-friendly product image galleries and home banners"
+  "zustand": "For global cart and user state management without complex context setup"
+  "react-hook-form": "For complex forms like checkout and store registration"
+  "@hookform/resolvers": "For Zod validation integration with react-hook-form"
+  "date-fns": "For formatting dates in order history and analytics"
+  "clsx": "For conditional tailwind class merging"
+  "tailwind-merge": "For resolving tailwind class conflicts"
+
+images:
+  - path: "artifacts/abz-market/public/images/hero-banner-1.png"
+    description: "Modern, clean 3D illustration of stylish living room furniture (sofa, lamp, plant) on a soft purple and white background, premium lighting"
+    aspect_ratio: "16:9"
+  - path: "artifacts/abz-market/public/images/hero-banner-2.png"
+    description: "Modern minimalist kitchen interior with sleek cabinets, soft purple ambient lighting, high-end 3D render"
+    aspect_ratio: "16:9"
+  - path: "artifacts/abz-market/public/images/store-cover.png"
+    description: "Abstract architectural background with soft purple gradients and geometric shapes, suitable for a store header cover"
+    aspect_ratio: "16:9"
+
+notes:
+  - Mobile-first design targeted for Telegram Mini App viewport (max-width ~430px)
+  - Using Zustand for Cart state to persist across page navigations
+  - Incorporating rich mock data fallbacks in API hooks to ensure the UI is fully visible even if backend endpoints return 404s
