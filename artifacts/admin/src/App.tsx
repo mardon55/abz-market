@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Products from "@/pages/products";
 import Orders from "@/pages/orders";
@@ -12,9 +14,9 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function Router() {
+function AdminRouter({ onLogout }: { onLogout: () => void }) {
   return (
-    <AdminLayout>
+    <AdminLayout onLogout={onLogout}>
       <Switch>
         <Route path="/"           component={Dashboard}  />
         <Route path="/products"   component={Products}   />
@@ -28,12 +30,27 @@ function Router() {
   );
 }
 
+function AppContent() {
+  const [authed, setAuthed] = useState(() => localStorage.getItem("abz_admin_auth") === "1");
+
+  const handleLogout = () => {
+    localStorage.removeItem("abz_admin_auth");
+    setAuthed(false);
+  };
+
+  if (!authed) return <Login onLogin={() => setAuthed(true)} />;
+
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <AdminRouter onLogout={handleLogout} />
+    </WouterRouter>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <Router />
-      </WouterRouter>
+      <AppContent />
       <Toaster />
     </QueryClientProvider>
   );

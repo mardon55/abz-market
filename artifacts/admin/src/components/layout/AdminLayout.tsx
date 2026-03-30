@@ -35,7 +35,7 @@ function NavItem({ icon: Icon, label, path, collapsed }: any) {
   );
 }
 
-export function AdminLayout({ children }: { children: ReactNode }) {
+export function AdminLayout({ children, onLogout }: { children: ReactNode; onLogout?: () => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -72,9 +72,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <Settings className="w-5 h-5 shrink-0" />
           {(!collapsed || mobile) && <span className="text-sm font-medium">Sozlamalar</span>}
         </div>
-        <div className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-white/55 hover:text-red-300 hover:bg-red-500/10 transition-all",
-        )}>
+        <div
+          onClick={onLogout}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-white/55 hover:text-red-300 hover:bg-red-500/10 transition-all",
+          )}
+        >
           <LogOut className="w-5 h-5 shrink-0" />
           {(!collapsed || mobile) && <span className="text-sm font-medium">Chiqish</span>}
         </div>
