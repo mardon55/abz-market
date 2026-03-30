@@ -10,6 +10,7 @@ import Orders from "@/pages/orders";
 import Users from "@/pages/users";
 import Stores from "@/pages/stores";
 import Categories from "@/pages/categories";
+import PaymentMethods from "@/pages/payment-methods";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -23,7 +24,8 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
         <Route path="/orders"     component={Orders}     />
         <Route path="/users"      component={Users}      />
         <Route path="/stores"     component={Stores}     />
-        <Route path="/categories" component={Categories} />
+        <Route path="/categories"      component={Categories}      />
+        <Route path="/payment-methods" component={PaymentMethods}   />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

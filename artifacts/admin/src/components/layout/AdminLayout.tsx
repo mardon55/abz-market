@@ -3,17 +3,18 @@ import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Store,
   LayoutGrid, Bell, Search, ChevronDown, LogOut, Menu, X,
-  Settings, BarChart2, TrendingUp,
+  Settings, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { icon: LayoutDashboard, label: "Dashboard",     path: "/" },
-  { icon: Package,         label: "Mahsulotlar",   path: "/products" },
-  { icon: ShoppingCart,    label: "Buyurtmalar",   path: "/orders" },
+  { icon: LayoutDashboard, label: "Dashboard",        path: "/" },
+  { icon: Package,         label: "Mahsulotlar",      path: "/products" },
+  { icon: ShoppingCart,    label: "Buyurtmalar",      path: "/orders" },
   { icon: Users,           label: "Foydalanuvchilar", path: "/users" },
-  { icon: Store,           label: "Do'konlar",     path: "/stores" },
-  { icon: LayoutGrid,      label: "Kategoriyalar", path: "/categories" },
+  { icon: Store,           label: "Do'konlar",        path: "/stores" },
+  { icon: LayoutGrid,      label: "Kategoriyalar",    path: "/categories" },
+  { icon: CreditCard,      label: "To'lov usullari",  path: "/payment-methods" },
 ];
 
 function NavItem({ icon: Icon, label, path, collapsed }: any) {
