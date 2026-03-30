@@ -1,4 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+// Telegram WebApp — lightweight singleton hook
+// tg.ready() and tg.expand() are called ONCE from App.tsx/TelegramProvider.
+// This hook only reads from the global tg object and returns stable helpers.
 
 declare global {
   interface Window {
@@ -22,27 +24,23 @@ interface TelegramWebApp {
       language_code?: string;
       photo_url?: string;
     };
-    start_param?: string;
   };
   colorScheme: "light" | "dark";
   themeParams: {
     bg_color?: string;
     text_color?: string;
-    hint_color?: string;
-    link_color?: string;
     button_color?: string;
     button_text_color?: string;
     secondary_bg_color?: string;
   };
   isExpanded: boolean;
   viewportHeight: number;
-  viewportStableHeight: number;
   version: string;
   platform: string;
   BackButton: {
     isVisible: boolean;
-    onClick(callback: () => void): void;
-    offClick(callback: () => void): void;
+    onClick(cb: () => void): void;
+    offClick(cb: () => void): void;
     show(): void;
     hide(): void;
   };
@@ -52,10 +50,9 @@ interface TelegramWebApp {
     textColor: string;
     isVisible: boolean;
     isActive: boolean;
-    isProgressVisible: boolean;
     setText(text: string): void;
-    onClick(callback: () => void): void;
-    offClick(callback: () => void): void;
+    onClick(cb: () => void): void;
+    offClick(cb: () => void): void;
     show(): void;
     hide(): void;
     enable(): void;
@@ -68,108 +65,57 @@ interface TelegramWebApp {
     notificationOccurred(type: "error" | "success" | "warning"): void;
     selectionChanged(): void;
   };
-  enableClosingConfirmation(): void;
-  disableClosingConfirmation(): void;
   onEvent(eventType: string, callback: () => void): void;
   offEvent(eventType: string, callback: () => void): void;
   sendData(data: string): void;
   openLink(url: string): void;
-  openTelegramLink(url: string): void;
-  openInvoice(url: string, callback?: (status: string) => void): void;
-  showPopup(params: { title?: string; message: string; buttons?: Array<{ id?: string; type?: string; text?: string }> }, callback?: (buttonId: string) => void): void;
   showAlert(message: string, callback?: () => void): void;
   showConfirm(message: string, callback: (result: boolean) => void): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
 }
 
-const tg = window.Telegram?.WebApp;
+// Singleton — read-only after module load
+const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
 
-export function useTelegram() {
-  const [colorScheme, setColorScheme] = useState<"light" | "dark">(
-    tg?.colorScheme || "light"
-  );
-  const [user, setUser] = useState(tg?.initDataUnsafe?.user || null);
+// Initialize ONCE at module level (no React re-render triggered)
+let _initialized = false;
+export function initTelegramOnce() {
+  if (_initialized || !tg) return;
+  _initialized = true;
+  tg.ready();
+  tg.expand();
+}
 
-  useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-
-      // Listen for theme changes
-      const handleThemeChange = () => {
-        setColorScheme(tg.colorScheme);
-      };
-      tg.onEvent("themeChanged", handleThemeChange);
-
-      return () => {
-        tg.offEvent("themeChanged", handleThemeChange);
-      };
-    }
-  }, []);
-
-  const showBackButton = useCallback((callback: () => void) => {
-    if (tg?.BackButton) {
-      tg.BackButton.show();
-      tg.BackButton.onClick(callback);
-    }
-  }, []);
-
-  const hideBackButton = useCallback((callback?: () => void) => {
-    if (tg?.BackButton) {
-      if (callback) tg.BackButton.offClick(callback);
-      tg.BackButton.hide();
-    }
-  }, []);
-
-  const showMainButton = useCallback((text: string, callback: () => void, color?: string) => {
-    if (tg?.MainButton) {
-      tg.MainButton.setText(text);
-      if (color) tg.MainButton.color = color;
-      tg.MainButton.show();
-      tg.MainButton.enable();
-      tg.MainButton.onClick(callback);
-    }
-  }, []);
-
-  const hideMainButton = useCallback((callback?: () => void) => {
-    if (tg?.MainButton) {
-      if (callback) tg.MainButton.offClick(callback);
-      tg.MainButton.hide();
-    }
-  }, []);
-
-  const haptic = useCallback((type: "impact" | "success" | "error" | "warning" | "selection" = "impact") => {
-    if (!tg?.HapticFeedback) return;
+// Stable haptic function (no hook, no re-render)
+export function hapticFeedback(type: "impact" | "success" | "error" | "warning" | "selection" = "impact") {
+  if (!tg?.HapticFeedback) return;
+  try {
     if (type === "impact") tg.HapticFeedback.impactOccurred("medium");
     else if (type === "selection") tg.HapticFeedback.selectionChanged();
-    else tg.HapticFeedback.notificationOccurred(type);
-  }, []);
+    else tg.HapticFeedback.notificationOccurred(type as "error" | "success" | "warning");
+  } catch (_) {
+    // HapticFeedback not supported in older versions — silently ignore
+  }
+}
 
-  const showAlert = useCallback((message: string) => {
-    if (tg) {
-      tg.showAlert(message);
-    } else {
-      alert(message);
-    }
-  }, []);
-
+// Hook — lightweight, no state, no side effects, safe to call anywhere
+export function useTelegram() {
   const isTelegram = !!tg;
-  const isExpanded = tg?.isExpanded ?? false;
-  const platform = tg?.platform || "web";
+  const colorScheme = tg?.colorScheme ?? "light";
+  const user = tg?.initDataUnsafe?.user ?? null;
+  const platform = tg?.platform ?? "web";
 
   return {
     tg,
     isTelegram,
     colorScheme,
     user,
-    isExpanded,
     platform,
-    showBackButton,
-    hideBackButton,
-    showMainButton,
-    hideMainButton,
-    haptic,
-    showAlert,
+    haptic: hapticFeedback,
+    showAlert(message: string) {
+      if (tg) tg.showAlert(message);
+      else alert(message);
+    },
   };
 }
