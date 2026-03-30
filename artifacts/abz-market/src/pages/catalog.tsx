@@ -11,16 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
 
-// ── Category emoji map ────────────────────────────────────────
-const CAT_EMOJI: Record<string, string> = {
-  Shkaflar:    "🚪",
-  Komodlar:    "🪵",
-  Oshxonalar:  "🍳",
-  Yotoqxona:   "🛏",
-  Stollar:     "🪑",
-  Stullar:     "💺",
-  Divonlar:    "🛋",
-  Javonlar:    "📚",
+// ── Category image map ────────────────────────────────────────
+const CAT_IMG: Record<string, string> = {
+  Shkaflar:    "/icons/shkaflar.png",
+  Komodlar:    "/icons/komodlar.png",
+  Oshxonalar:  "/icons/oshxonalar.png",
+  Yotoqxona:   "/icons/yotoqxona.png",
+  Stollar:     "/icons/stollar.png",
+  Stullar:     "/icons/stullar.png",
+  Divonlar:    "/icons/divonlar.png",
+  Javonlar:    "/icons/javonlar.png",
 };
 
 const CAT_BG: Record<string, string> = {
@@ -34,8 +34,8 @@ const CAT_BG: Record<string, string> = {
   Javonlar:    "from-lime-500 to-green-600",
 };
 
-function catEmoji(name: string) { return CAT_EMOJI[name] ?? "🪑"; }
-function catBg(name: string)    { return CAT_BG[name] ?? "from-purple-500 to-violet-600"; }
+function catImg(name: string)  { return CAT_IMG[name] ?? null; }
+function catBg(name: string)   { return CAT_BG[name] ?? "from-purple-500 to-violet-600"; }
 function fmt(n: number)         { return n.toLocaleString("ru-RU") + " so'm"; }
 
 type SortKey = "default" | "price_asc" | "price_desc" | "rating";
@@ -160,13 +160,17 @@ export default function Catalog() {
                 key={cat.id}
                 onClick={() => selectCategory(cat.id)}
                 className={cn(
-                  "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap",
+                  "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5",
                   activeCategory === cat.id
                     ? "bg-primary text-white shadow-ios-sm shadow-primary/30"
                     : "glass-card text-foreground/70"
                 )}
               >
-                {catEmoji(cat.name)} {cat.name}
+                {catImg(cat.name)
+                  ? <img src={catImg(cat.name)!} alt="" className="w-4 h-4 object-contain" />
+                  : null
+                }
+                {cat.name}
               </button>
             ))}
           </div>
@@ -205,7 +209,12 @@ export default function Catalog() {
                   <div className="absolute -bottom-5 -left-5 w-20 h-20 bg-white/10 rounded-full blur-sm" />
                   {/* content */}
                   <div className="relative z-10 flex flex-col justify-between h-full p-3.5">
-                    <div className="text-4xl drop-shadow-md">{catEmoji(cat.name)}</div>
+                    <div className="w-14 h-14 bg-white/25 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-sm overflow-hidden">
+                      {catImg(cat.name)
+                        ? <img src={catImg(cat.name)!} alt={cat.name} className="w-11 h-11 object-contain drop-shadow-md" />
+                        : <span className="text-3xl">🪑</span>
+                      }
+                    </div>
                     <div>
                       <div className="font-display font-bold text-white text-[15px] leading-tight drop-shadow">{cat.name}</div>
                       {cat.productCount && (
@@ -254,8 +263,11 @@ export default function Catalog() {
           <div className="flex items-center justify-between mb-3">
             <div>
               {activeCategory && activeCategory !== "__all__" ? (
-                <h3 className="font-display font-bold text-lg">
-                  {catEmoji(activeCategoryName)} {activeCategoryName}
+                <h3 className="font-display font-bold text-lg flex items-center gap-2">
+                  {catImg(activeCategoryName) && (
+                    <img src={catImg(activeCategoryName)!} alt="" className="w-6 h-6 object-contain" />
+                  )}
+                  {activeCategoryName}
                 </h3>
               ) : isSearching ? (
                 <h3 className="font-display font-bold text-lg">Qidiruv natijalari</h3>

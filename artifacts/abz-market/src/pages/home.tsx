@@ -5,9 +5,9 @@ import { useCategories, useProducts } from "@/hooks/use-api";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Bell, ChevronRight, Search, Zap, Flame, Sparkles,
+  Bell, ChevronRight, Search, Flame, Sparkles, Store, Zap,
   Star, TruckIcon, ShieldCheck, RotateCcw, Percent,
-  Store, LayoutGrid, Clock, ArrowRight,
+  LayoutGrid, Clock, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hapticFeedback } from "@/hooks/use-telegram";
@@ -48,15 +48,21 @@ const BANNERS = [
 ];
 
 const CAT_ICONS: Record<string, string> = {
-  Shkaflar: "🚪", Komodlar: "🪵", Oshxonalar: "🍳",
-  Yotoqxona: "🛏", Stollar: "🪑", Stullar: "💺",
+  Shkaflar:   "/icons/shkaflar.png",
+  Komodlar:   "/icons/komodlar.png",
+  Oshxonalar: "/icons/oshxonalar.png",
+  Yotoqxona:  "/icons/yotoqxona.png",
+  Stollar:    "/icons/stollar.png",
+  Stullar:    "/icons/stullar.png",
+  Divonlar:   "/icons/divonlar.png",
+  Javonlar:   "/icons/javonlar.png",
 };
 
 const QUICK_ACTIONS = [
-  { icon: Zap,      label: "Flash sale",   path: "/catalog", color: "text-amber-500",   glow: "shadow-amber-200",   bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
-  { icon: Flame,    label: "Top mahsulot", path: "/catalog?featured=true", color: "text-rose-500",    glow: "shadow-rose-200",    bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
-  { icon: Sparkles, label: "Yangilar",     path: "/catalog", color: "text-violet-500",  glow: "shadow-violet-200",  bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
-  { icon: Store,    label: "Do'konlar",    path: "/stores",  color: "text-emerald-500", glow: "shadow-emerald-200", bg: "from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40" },
+  { img: "/icons/flash.png",    label: "Flash sale",   path: "/catalog",              bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
+  { img: "/icons/flame.png",    label: "Top mahsulot", path: "/catalog?featured=true",bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
+  { img: "/icons/yangilar.png", label: "Yangilar",     path: "/catalog",              bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
+  { img: "/icons/dokonlar.png", label: "Do'konlar",    path: "/stores",               bg: "from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40" },
 ];
 
 const TRUST = [
@@ -213,17 +219,17 @@ export default function Home() {
       {/* ── Quick actions ── */}
       <div className="px-4 mb-6">
         <div className="grid grid-cols-4 gap-2">
-          {QUICK_ACTIONS.map(({ icon: Icon, label, path, color, glow, bg }) => (
+          {QUICK_ACTIONS.map(({ img, label, path, bg }) => (
             <button
               key={label}
               onClick={() => goTo(path)}
               className="flex flex-col items-center gap-1.5 press"
             >
               <div className={cn(
-                "w-full aspect-square rounded-[20px] flex items-center justify-center bg-gradient-to-br glass-card shadow-ios-sm",
-                bg, glow
+                "w-full aspect-square rounded-[20px] flex items-center justify-center bg-gradient-to-br glass-card shadow-ios-sm overflow-hidden",
+                bg
               )}>
-                <Icon className={cn("w-6 h-6", color)} />
+                <img src={img} alt={label} className="w-11 h-11 object-contain drop-shadow-md" />
               </div>
               <span className="text-[10px] font-semibold text-center text-foreground/75 leading-tight">{label}</span>
             </button>
@@ -259,8 +265,8 @@ export default function Home() {
         <div className="flex gap-3 px-4 overflow-x-auto hide-scrollbar pb-1">
           {/* All */}
           <button onClick={() => goTo("/catalog")} className="flex-none flex flex-col items-center gap-1.5 press">
-            <div className="w-[60px] h-[60px] rounded-[22px] bg-primary flex items-center justify-center shadow-ios">
-              <LayoutGrid className="w-7 h-7 text-white" />
+            <div className="w-[60px] h-[60px] rounded-[22px] bg-primary flex items-center justify-center shadow-ios overflow-hidden">
+              <img src="/icons/barchasi.png" alt="Barchasi" className="w-11 h-11 object-contain" />
             </div>
             <span className="text-[11px] font-semibold w-[60px] text-center leading-tight">Barchasi</span>
           </button>
@@ -268,8 +274,11 @@ export default function Home() {
             ? [1,2,3,4].map((i) => <Skeleton key={i} className="flex-none w-[60px] h-[90px] rounded-2xl" />)
             : cats.map((cat) => (
                 <button key={cat.id} onClick={() => goTo(`/catalog?category=${cat.id}`)} className="flex-none flex flex-col items-center gap-1.5 press">
-                  <div className="w-[60px] h-[60px] rounded-[22px] glass-card flex items-center justify-center text-2xl shadow-ios-sm">
-                    {CAT_ICONS[cat.name] ?? "🪑"}
+                  <div className="w-[60px] h-[60px] rounded-[22px] glass-card flex items-center justify-center shadow-ios-sm overflow-hidden">
+                    {CAT_ICONS[cat.name]
+                      ? <img src={CAT_ICONS[cat.name]} alt={cat.name} className="w-10 h-10 object-contain drop-shadow-sm" />
+                      : <span className="text-2xl">🪑</span>
+                    }
                   </div>
                   <span className="text-[11px] font-semibold w-[60px] text-center leading-tight line-clamp-2">{cat.name}</span>
                 </button>
