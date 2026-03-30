@@ -1,167 +1,361 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { MobileLayout } from "@/components/layout/MobileLayout";
-import { Search, SlidersHorizontal, ArrowUpDown } from "lucide-react";
+import {
+  Search, SlidersHorizontal, ArrowLeft, X, ChevronRight,
+  ArrowUpDown, Package,
+} from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/use-api";
 import { ProductCard } from "@/components/ui/ProductCard";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { hapticFeedback } from "@/hooks/use-telegram";
+import { cn } from "@/lib/utils";
+
+// ── Category emoji map ────────────────────────────────────────
+const CAT_EMOJI: Record<string, string> = {
+  Shkaflar:    "🚪",
+  Komodlar:    "🪵",
+  Oshxonalar:  "🍳",
+  Yotoqxona:   "🛏",
+  Stollar:     "🪑",
+  Stullar:     "💺",
+  Divonlar:    "🛋",
+  Javonlar:    "📚",
+};
+
+const CAT_BG: Record<string, string> = {
+  Shkaflar:    "from-violet-500 to-purple-600",
+  Komodlar:    "from-amber-500 to-orange-500",
+  Oshxonalar:  "from-emerald-500 to-teal-600",
+  Yotoqxona:   "from-blue-500 to-indigo-600",
+  Stollar:     "from-rose-500 to-pink-600",
+  Stullar:     "from-cyan-500 to-sky-600",
+  Divonlar:    "from-fuchsia-500 to-violet-600",
+  Javonlar:    "from-lime-500 to-green-600",
+};
+
+function catEmoji(name: string) { return CAT_EMOJI[name] ?? "🪑"; }
+function catBg(name: string)    { return CAT_BG[name] ?? "from-purple-500 to-violet-600"; }
+function fmt(n: number)         { return n.toLocaleString("ru-RU") + " so'm"; }
+
+type SortKey = "default" | "price_asc" | "price_desc" | "rating";
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "default",    label: "Standart" },
+  { key: "price_asc",  label: "Arzon avval" },
+  { key: "price_desc", label: "Qimmat avval" },
+  { key: "rating",     label: "Eng yaxshi" },
+];
 
 export default function Catalog() {
+  const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  
-  const { data: categories } = useCategories();
-  const { data: productsData, isLoading } = useProducts({ 
+  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [showSortSheet, setShowSortSheet] = useState(false);
+
+  // Read ?category=X from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get("category");
+    if (cat) setActiveCategory(cat);
+  }, [location]);
+
+  const { data: catData, isLoading: catLoading } = useCategories();
+  const realCategoryId = activeCategory && activeCategory !== "__all__" ? activeCategory : undefined;
+
+  const { data: productsData, isLoading: prodLoading } = useProducts({
     search: searchQuery || undefined,
-    categoryId: activeCategory || undefined
+    categoryId: realCategoryId,
   });
+
+  const categories = catData?.categories ?? [];
+  const products = productsData?.products ?? [];
+
+  // Client-side sort
+  const sorted = [...products].sort((a, b) => {
+    if (sortKey === "price_asc")  return a.price - b.price;
+    if (sortKey === "price_desc") return b.price - a.price;
+    if (sortKey === "rating")     return (b.rating ?? 0) - (a.rating ?? 0);
+    return 0;
+  });
+
+  // Derive category name directly from categories (no race condition)
+  const activeCategoryName = activeCategory && activeCategory !== "__all__"
+    ? (categories.find((c) => c.id === activeCategory)?.name ?? "")
+    : "";
+
+  const selectCategory = (id: string) => {
+    hapticFeedback("selection");
+    setActiveCategory(id);
+    setSearchQuery("");
+  };
+
+  const clearCategory = () => {
+    hapticFeedback("selection");
+    setActiveCategory(null);
+    setSearchQuery("");
+  };
+
+  const isSearching = searchQuery.length > 0;
+  const showProducts = activeCategory !== null || isSearching;
 
   return (
     <MobileLayout hideNav={false} title="Katalog" showBack>
-      {/* Search and Filter Bar */}
-      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur-md px-4 py-3 border-b border-border/50">
-        <div className="flex gap-2 mb-3">
+
+      {/* ── Sticky top bar ── */}
+      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur-md border-b border-border/40">
+        {/* Search row */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2">
+          {/* Back-to-categories button when category is active */}
+          {activeCategory && (
+            <button
+              onClick={clearCategory}
+              className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            >
+              <ArrowLeft className="w-4 h-4 text-primary" />
+            </button>
+          )}
+
+          {/* Search input */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Mahsulot qidirish..." 
-              className="pl-9 bg-secondary/50 border-none h-11 rounded-xl focus-visible:ring-primary/20"
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              placeholder={activeCategory ? `${activeCategoryName}da qidirish...` : "Mahsulot qidirish..."}
+              className="w-full pl-9 pr-9 h-10 bg-muted/60 border border-border/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all placeholder:text-muted-foreground"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
           </div>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl bg-secondary/50 border-none shrink-0 text-foreground">
-                <SlidersHorizontal className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl sm:max-w-md mx-auto">
-              <SheetHeader className="text-left pb-4 border-b border-border">
-                <SheetTitle className="font-display font-bold">Filtrlash</SheetTitle>
-              </SheetHeader>
-              <div className="py-4 space-y-6 overflow-y-auto h-full pb-20">
-                {/* Mock Filter Sections */}
-                <div>
-                  <h4 className="font-semibold mb-3">Narx</h4>
-                  <div className="flex items-center gap-3">
-                    <Input placeholder="Dan" type="number" className="rounded-xl" />
-                    <span className="text-muted-foreground">-</span>
-                    <Input placeholder="Gacha" type="number" className="rounded-xl" />
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold mb-3">Rang</h4>
-                  <div className="flex flex-wrap gap-3">
-                    {['#FFFFFF', '#000000', '#8B5A2B', '#1E293B', '#F59E0B'].map(color => (
-                      <button 
-                        key={color} 
-                        className="w-8 h-8 rounded-full border-2 border-border/50 shadow-sm focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="font-semibold mb-3">O'lcham</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {['Kichik', 'Standart', 'Katta', 'M', 'L', 'XL'].map(size => (
-                      <Badge key={size} variant="outline" className="px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-secondary">
-                        {size}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
-                <Button className="w-full rounded-xl py-6 font-semibold">Natijalarni ko'rish</Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-
-        {/* Categories Horizontal Scroll */}
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4">
-          <button 
-            onClick={() => setActiveCategory(null)}
-            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
-              activeCategory === null 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-background text-foreground border-border hover:bg-secondary'
-            }`}
-          >
-            Barchasi
-          </button>
-          {categories?.categories.map(cat => (
+          {/* Sort button (only when showing products) */}
+          {showProducts && (
             <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
-                activeCategory === cat.id 
-                  ? 'bg-primary text-primary-foreground border-primary' 
-                  : 'bg-background text-foreground border-border hover:bg-secondary'
-              }`}
+              onClick={() => { hapticFeedback("selection"); setShowSortSheet(true); }}
+              className="w-9 h-9 rounded-xl bg-muted/60 border border-border/50 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
             >
-              {cat.name}
+              <SlidersHorizontal className="w-4 h-4 text-foreground" />
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Products Grid */}
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-muted-foreground font-medium">
-            {productsData?.total || 0} ta mahsulot topildi
-          </p>
-          <Button variant="ghost" size="sm" className="h-8 text-xs font-medium px-2 text-muted-foreground">
-            <ArrowUpDown className="w-3.5 h-3.5 mr-1" /> Arzonlari oldin
-          </Button>
+          )}
         </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-64 rounded-2xl" />)}
-          </div>
-        ) : productsData?.products.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg">Hech narsa topilmadi</h3>
-            <p className="text-sm text-muted-foreground mt-1">Boshqa so'z bilan qidirib ko'ring</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {productsData?.products.map(product => (
-              <div key={product.id}>
-                <ProductCard product={product} />
-              </div>
+        {/* Category chips row (when inside a category) */}
+        {showProducts && categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pb-2.5">
+            <button
+              onClick={clearCategory}
+              className={cn(
+                "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                !activeCategory ? "bg-primary text-white border-primary" : "bg-background text-foreground border-border"
+              )}
+            >
+              Barchasi
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => selectCategory(cat.id)}
+                className={cn(
+                  "flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all whitespace-nowrap",
+                  activeCategory === cat.id
+                    ? "bg-primary text-white border-primary"
+                    : "bg-background text-foreground border-border"
+                )}
+              >
+                {catEmoji(cat.name)} {cat.name}
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* ══════════════════════════════════════════════════
+          MODE A — Category selection grid (default view)
+         ══════════════════════════════════════════════════ */}
+      {!showProducts && (
+        <div className="px-4 pt-4 pb-8">
+          {/* Hero label */}
+          <div className="mb-5">
+            <h2 className="font-display font-bold text-xl text-foreground">Kategoriyalar</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Qaysi bo'limni qidirmoqchisiz?</p>
+          </div>
+
+          {/* 2-column category cards */}
+          {catLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => selectCategory(cat.id)}
+                  className="relative overflow-hidden rounded-2xl aspect-[4/3] active:scale-[0.97] transition-transform shadow-sm"
+                >
+                  {/* Gradient bg */}
+                  <div className={cn("absolute inset-0 bg-gradient-to-br", catBg(cat.name))} />
+                  {/* Decorative circle */}
+                  <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/15 rounded-full" />
+                  <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-white/10 rounded-full" />
+                  {/* Content */}
+                  <div className="relative z-10 flex flex-col justify-between h-full p-3.5">
+                    <div className="text-4xl">{catEmoji(cat.name)}</div>
+                    <div>
+                      <div className="font-display font-bold text-white text-[15px] leading-tight">{cat.name}</div>
+                      {cat.productCount && (
+                        <div className="text-white/70 text-[11px] mt-0.5">{cat.productCount} ta mahsulot</div>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-white/50" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="mt-6 mb-4 flex items-center gap-3">
+            <div className="flex-1 h-px bg-border/60" />
+            <span className="text-xs text-muted-foreground font-medium">yoki barcha mahsulotlar</span>
+            <div className="flex-1 h-px bg-border/60" />
+          </div>
+
+          {/* "View all" CTA */}
+          <button
+            onClick={() => { hapticFeedback("selection"); setActiveCategory("__all__"); }}
+            className="w-full flex items-center justify-between bg-muted/50 border border-border/60 rounded-2xl px-4 py-3.5 active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                <Package className="w-5 h-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">Barchasi</div>
+                <div className="text-xs text-muted-foreground">{productsData?.total ?? 0} ta mahsulot</div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+          MODE B — Products list (category selected / search)
+         ══════════════════════════════════════════════════ */}
+      {showProducts && (
+        <div className="px-4 pt-3 pb-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              {activeCategory && activeCategory !== "__all__" ? (
+                <h3 className="font-display font-bold text-lg">
+                  {catEmoji(activeCategoryName)} {activeCategoryName}
+                </h3>
+              ) : isSearching ? (
+                <h3 className="font-display font-bold text-lg">Qidiruv natijalari</h3>
+              ) : (
+                <h3 className="font-display font-bold text-lg">Barcha mahsulotlar</h3>
+              )}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {prodLoading ? "Yuklanmoqda..." : `${sorted.length} ta mahsulot`}
+              </p>
+            </div>
+
+            {/* Active sort badge */}
+            {sortKey !== "default" && (
+              <button
+                onClick={() => setSortKey("default")}
+                className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full"
+              >
+                {SORT_OPTIONS.find((s) => s.key === sortKey)?.label}
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Loading */}
+          {prodLoading && (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+            </div>
+          )}
+
+          {/* Empty */}
+          {!prodLoading && sorted.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-9 h-9 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-base">Hech narsa topilmadi</h3>
+              <p className="text-sm text-muted-foreground mt-1">Boshqa kategoriya yoki so'z sinab ko'ring</p>
+              <button
+                onClick={clearCategory}
+                className="mt-4 px-6 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl active:scale-95 transition-transform"
+              >
+                Kategoriyalarga qaytish
+              </button>
+            </div>
+          )}
+
+          {/* Products grid */}
+          {!prodLoading && sorted.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {sorted.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Sort bottom sheet ── */}
+      {showSortSheet && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end"
+          onClick={() => setShowSortSheet(false)}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          <div
+            className="relative bg-background rounded-t-3xl px-4 pt-3 pb-8 max-w-[430px] w-full mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <ArrowUpDown className="w-5 h-5 text-primary" /> Saralash
+            </h3>
+            <div className="space-y-2">
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => {
+                    hapticFeedback("selection");
+                    setSortKey(opt.key);
+                    setShowSortSheet(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all text-sm font-medium",
+                    sortKey === opt.key
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-muted/40 border-border/50 text-foreground"
+                  )}
+                >
+                  {opt.label}
+                  {sortKey === opt.key && (
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </MobileLayout>
   );
-}
-
-// Temporary internal Badge for Catalog
-function Badge({ children, className, variant = "default" }: any) {
-  const base = "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
-  const variants = {
-    default: "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-    outline: "text-foreground",
-  };
-  return <div className={`${base} ${variants[variant as keyof typeof variants]} ${className}`}>{children}</div>;
 }
