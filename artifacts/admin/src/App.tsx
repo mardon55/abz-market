@@ -31,10 +31,11 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
 }
 
 function AppContent() {
-  const [authed, setAuthed] = useState(() => localStorage.getItem("abz_admin_auth") === "1");
+  const ADMIN_TOKEN = "abz_admin_tg_6271849608";
+  const [authed, setAuthed] = useState(() => localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN);
 
   const handleLogout = () => {
-    localStorage.removeItem("abz_admin_auth");
+    localStorage.removeItem("abz_admin_tg_token");
     setAuthed(false);
   };
 

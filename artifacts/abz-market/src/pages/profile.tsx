@@ -7,8 +7,11 @@ import {
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
   ShoppingBag, Star, Bell,
 } from "lucide-react";
-import { hapticFeedback } from "@/hooks/use-telegram";
+import { hapticFeedback, useTelegram } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
+
+const ADMIN_TG_ID = 6271849608;
+const ADMIN_TOKEN = "abz_admin_tg_" + ADMIN_TG_ID;
 
 // ── Storage helpers ───────────────────────────────────────────
 interface UserProfile {
@@ -264,6 +267,15 @@ export default function Profile() {
   const [user, setUser]             = useState<UserProfile | null>(null);
   const [showSheet, setShowSheet]   = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const { user: tgUser } = useTelegram();
+
+  const isAdmin = tgUser?.id === ADMIN_TG_ID;
+
+  const openAdminPanel = () => {
+    hapticFeedback("impact");
+    try { localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN); } catch {}
+    window.open("/admin/", "_blank");
+  };
 
   useEffect(() => {
     setUser(loadProfile());
@@ -354,6 +366,18 @@ export default function Profile() {
               Kirish
             </button>
           </p>
+
+          {/* Admin Panel button — unregistered admin */}
+          {isAdmin && (
+            <button
+              onClick={openAdminPanel}
+              className="mt-5 w-full h-12 bg-gradient-to-r from-violet-700 to-purple-600 text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-sm press shadow-ios-sm shadow-violet-500/30"
+            >
+              <Store className="w-4 h-4" />
+              Admin Panel
+              <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-md text-[10px] font-bold">ADMIN</span>
+            </button>
+          )}
         </div>
 
       ) : (
@@ -410,6 +434,20 @@ export default function Profile() {
           <MenuSection items={menuItems}   title="Asosiy" />
           <MenuSection items={sellerItems} title="Sotuvchi paneli" />
           <MenuSection items={settingsItems} title="Qo'shimcha" />
+
+          {/* Admin Panel button — only for admin */}
+          {isAdmin && (
+            <div className="px-4 mb-3">
+              <button
+                onClick={openAdminPanel}
+                className="w-full h-12 bg-gradient-to-r from-violet-700 to-purple-600 text-white rounded-2xl flex items-center justify-center gap-2 font-bold text-sm press shadow-ios-sm shadow-violet-500/30"
+              >
+                <Store className="w-4 h-4" />
+                Admin Panel
+                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-md text-[10px] font-bold">ADMIN</span>
+              </button>
+            </div>
+          )}
 
           {/* Logout */}
           <div className="px-4 mt-2 mb-8">
