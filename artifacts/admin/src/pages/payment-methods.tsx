@@ -60,7 +60,7 @@ function CardPreview({ card, small = false }: { card: PaymentCard; small?: boole
         {/* Middle: card number */}
         {!small && (
           <div className={cn("font-mono tracking-widest text-lg font-bold", card.textColor)}>
-            •••• •••• •••• {card.cardNumber}
+            {card.cardNumber || "•••• •••• •••• ••••"}
           </div>
         )}
 
@@ -128,7 +128,7 @@ function AddCardModal({ onClose, onSave }: { onClose: () => void; onSave: (card:
     onSave({
       id: Date.now().toString(),
       bankName: bank.name,
-      cardNumber: cardNum.replace(/\D/g, "").slice(-4),
+      cardNumber: cardNum.trim(),
       cardHolder: holder.toUpperCase().trim(),
       expiry,
       gradient: bank.gradient,
@@ -339,7 +339,8 @@ export default function PaymentMethods() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-sm">{card.bankName}</p>
-                    <p className="text-xs text-muted-foreground font-mono">•••• •••• •••• {card.cardNumber}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{card.cardNumber}</p>
+                    <p className="text-xs text-muted-foreground">{card.cardHolder}</p>
                   </div>
                   <span className={cn(
                     "badge",

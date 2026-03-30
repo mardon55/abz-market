@@ -45,21 +45,34 @@ function MiniCard({ card, selected, onClick }: { card: PaymentCard; selected: bo
         selected ? "border-primary scale-[1.02] shadow-lg shadow-primary/20" : "border-transparent"
       )}
     >
-      <div className={cn("bg-gradient-to-br p-4 h-24", card.gradient)}>
-        {/* Decorative */}
+      <div className={cn("bg-gradient-to-br p-4 h-32", card.gradient)}>
+        {/* Decorative circles */}
         <div className="absolute -top-4 -right-4 w-16 h-16 bg-white/10 rounded-full" />
         <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-white/10 rounded-full" />
+
         <div className="relative h-full flex flex-col justify-between">
+          {/* Bank name + logo */}
           <div className="flex items-center justify-between">
-            <span className={cn("text-xs font-bold", card.textColor)}>{card.bankName}</span>
+            <span className={cn("text-xs font-bold tracking-wide", card.textColor)}>{card.bankName}</span>
             <span className="text-base">{card.logo}</span>
           </div>
+
+          {/* Full card number */}
+          <div className={cn("font-mono text-[11px] font-bold tracking-widest", card.textColor)}>
+            {card.cardNumber || "•••• •••• •••• ••••"}
+          </div>
+
+          {/* Cardholder + expiry */}
           <div className="flex items-end justify-between">
-            <span className={cn("text-xs font-mono font-semibold", card.textColor)}>•••• {card.cardNumber}</span>
-            <span className={cn("text-[10px] font-mono", card.textColor, "opacity-80")}>{card.expiry}</span>
+            <span className={cn("text-[10px] font-semibold uppercase tracking-wide truncate max-w-[60%]", card.textColor)}>
+              {card.cardHolder}
+            </span>
+            <span className={cn("text-[10px] font-mono opacity-80", card.textColor)}>{card.expiry}</span>
           </div>
         </div>
       </div>
+
+      {/* Selected checkmark */}
       {selected && (
         <div className="absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow">
           <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
