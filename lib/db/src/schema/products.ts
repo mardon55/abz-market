@@ -77,6 +77,7 @@ export const ordersTable = pgTable("orders", {
   paymentMethod: text("payment_method").notNull().default("cash"),
   totalPrice: numeric("total_price", { precision: 15, scale: 2 }).notNull(),
   storeId: uuid("store_id").references(() => storesTable.id),
+  telegramId: text("telegram_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

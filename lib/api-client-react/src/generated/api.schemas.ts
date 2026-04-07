@@ -106,6 +106,7 @@ export interface CreateOrderRequest {
   address: string;
   comment?: string;
   paymentMethod: CreateOrderRequestPaymentMethod;
+  telegramId?: string;
 }
 
 export type StoreType = (typeof StoreType)[keyof typeof StoreType];
@@ -194,6 +195,7 @@ export type GetCategories200 = {
 
 export type GetOrdersParams = {
   status?: GetOrdersStatus;
+  telegramId?: string;
 };
 
 export type GetOrdersStatus =

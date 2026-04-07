@@ -164,6 +164,7 @@ export const CreateOrderBody = zod.object({
   address: zod.string(),
   comment: zod.string().optional(),
   paymentMethod: zod.enum(["cash", "card", "installment"]),
+  telegramId: zod.string().optional(),
 });
 
 /**

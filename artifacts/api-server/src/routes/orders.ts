@@ -17,10 +17,11 @@ function generateOrderNumber(): string {
 
 router.get("/orders", async (req, res) => {
   try {
-    const { status } = req.query as Record<string, string>;
+    const { status, telegramId } = req.query as Record<string, string>;
 
     const conditions = [];
     if (status) conditions.push(eq(ordersTable.status, status));
+    if (telegramId) conditions.push(eq(ordersTable.telegramId, telegramId));
 
     const orders = await db
       .select({
@@ -90,6 +91,7 @@ router.post("/orders", async (req, res) => {
         paymentMethod: body.paymentMethod,
         totalPrice: totalPrice.toString(),
         storeId,
+        telegramId: body.telegramId ?? null,
       })
       .returning();
 

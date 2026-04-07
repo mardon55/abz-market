@@ -117,11 +117,25 @@ export default function Checkout() {
 
   const paymentMethod = watch("paymentMethod");
 
+  const getTelegramId = (): string | undefined => {
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      const id = tg?.initDataUnsafe?.user?.id;
+      if (id) return String(id);
+      const stored = localStorage.getItem("tg_user_id");
+      return stored ?? undefined;
+    } catch { return undefined; }
+  };
+
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const onSubmit = async (data: CheckoutForm) => {
     if (items.length === 0) return;
+    setSubmitError(null);
     try {
       await createOrder.mutateAsync({
         ...data,
+        telegramId: getTelegramId(),
         items: items.map((i) => ({
           productId:    i.product.id,
           quantity:     i.quantity,
@@ -132,6 +146,7 @@ export default function Checkout() {
       navigate("/orders");
     } catch (error) {
       console.error("Order error", error);
+      setSubmitError("Buyurtma berishda xato yuz berdi. Iltimos qayta urining.");
     }
   };
 
@@ -290,6 +305,11 @@ export default function Checkout() {
 
       {/* Fixed bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto glass border-t border-white/30 p-4 pb-safe z-50">
+        {submitError && (
+          <div className="mb-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 font-medium">
+            ⚠️ {submitError}
+          </div>
+        )}
         <Button
           type="submit"
           form="checkout-form"

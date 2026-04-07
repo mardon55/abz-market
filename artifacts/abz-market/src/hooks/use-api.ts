@@ -68,16 +68,9 @@ export function useOrders(params?: GetOrdersParams) {
   return useQuery({
     queryKey: ['/api/orders', params],
     queryFn: async () => {
-      try {
-        const data = await getOrders(params);
-        if (data && data.orders) return data;
-        throw new Error("Invalid response");
-      } catch (e) {
-        console.warn("Using mock orders");
-        let filtered = [...mockOrders];
-        if (params?.status) filtered = filtered.filter(o => o.status === params.status);
-        return { orders: filtered };
-      }
+      const data = await getOrders(params);
+      if (data && data.orders) return data;
+      return { orders: [] };
     }
   });
 }
@@ -151,12 +144,7 @@ export function useSubmitOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateOrderRequest) => {
-      try {
-        return await createOrder(data);
-      } catch (e) {
-        // Mock successful creation
-        return new Promise(resolve => setTimeout(() => resolve(mockOrders[0]), 1000));
-      }
+      return await createOrder(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
