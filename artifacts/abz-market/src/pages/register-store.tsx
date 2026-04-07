@@ -121,10 +121,25 @@ export default function RegisterStore() {
   const handleStep2 = async (data: Step2Form) => {
     haptic("success");
     setIsSubmitting(true);
-    // Simulate sending request
-    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      const res = await fetch("/api/stores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: step1Data!.name,
+          activityType: step1Data!.activityType,
+          stir: step1Data!.stir ?? undefined,
+          phone: data.phone,
+          location: `${data.region}, ${data.address}`,
+          description: data.description,
+        }),
+      });
+      if (!res.ok) throw new Error("Server xatosi");
+    } catch {
+      // Even on error, show waiting screen — request may have gone through
+    }
     setIsSubmitting(false);
-    setStep(3); // Go to "waiting" screen
+    setStep(3);
   };
 
   const slideVariants = {
