@@ -65,12 +65,12 @@ export default function ProductDetail() {
       </div>
     }>
       {/* Image Gallery */}
-      <div className="bg-muted relative -mt-14 pt-0 aspect-[4/5] w-full">
+      <div className="bg-white relative -mt-14 pt-0 aspect-[4/5] w-full">
         <div className="overflow-hidden h-full" ref={emblaRef}>
           <div className="flex h-full">
             {(product.images?.length ? product.images : ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80']).map((img, i) => (
-              <div key={i} className="flex-[0_0_100%] min-w-0 h-full relative">
-                <img src={img} alt="" className="w-full h-full object-cover" />
+              <div key={i} className="flex-[0_0_100%] min-w-0 h-full relative bg-white">
+                <img src={img} alt="" className="w-full h-full object-contain" />
                 {/* Gradient overlay for header visibility */}
                 <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/40 to-transparent"></div>
               </div>

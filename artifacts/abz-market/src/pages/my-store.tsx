@@ -540,6 +540,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const [colors, setColors]     = useState<string[]>(editProduct?.colors ?? []);
   const [sizes, setSizes]       = useState<string[]>(editProduct?.sizes ?? []);
   const [specs, setSpecs]       = useState<Record<string, string>>(parseEditSpecs);
+  const [deliveryDays, setDeliveryDays] = useState<string>(
+    editProduct?.deliveryDays ? String(editProduct.deliveryDays) : "3"
+  );
   const [saving, setSaving]     = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [error, setError]       = useState("");
@@ -599,6 +602,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
         colors: colors.length ? colors : null,
         sizes: sizes.length ? sizes : null,
         dimensions: dimensionsStr || null,
+        deliveryDays: parseInt(deliveryDays) || 3,
       };
 
       let res: Response;
@@ -806,6 +810,30 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
             onRemove={(i) => setSizes((p) => p.filter((_, j) => j !== i))}
             placeholder="O'lcham kiriting (masalan: 160×80×75 sm)" presets={PRESET_SIZES}
           />
+
+          {/* Delivery days */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+              🚚 Yetkazib berish muddati *
+            </label>
+            <div className="relative">
+              <select
+                value={deliveryDays}
+                onChange={(e) => setDeliveryDays(e.target.value)}
+                className="w-full h-11 px-4 pr-9 bg-muted/50 border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="1">1 kun ichida (ekpress)</option>
+                <option value="2">2 kun ichida</option>
+                <option value="3">3 kun ichida</option>
+                <option value="5">3–5 kun ichida</option>
+                <option value="7">5–7 kun ichida</option>
+                <option value="14">7–14 kun ichida</option>
+                <option value="30">14–30 kun ichida</option>
+                <option value="0">Kelishiladi (aloqa orqali)</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
 
           {/* Description */}
           <div>
