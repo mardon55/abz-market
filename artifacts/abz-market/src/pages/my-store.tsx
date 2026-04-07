@@ -73,12 +73,16 @@ interface SpecField {
 }
 interface CategorySpec { names: string[]; emoji: string; fields: SpecField[]; }
 
+const KORPUS_OPTIONS = ["LDSP Laminat","MDF","Eman massiv","Sosna massiv","Metall","Plastik","Kombinatsiya (LDSP+MDF)"];
+const FASAD_OPTIONS  = ["MDF bo'yalgan (emal)","Akril","Eman furnir","Matt laminat","PVC plyonka","Shisha (tempered)","Plastik ABS","Alyuminiy profil","Kombinatsiya"];
+
 const CATEGORY_SPECS: CategorySpec[] = [
   {
     names: ["Shkaflar"],
     emoji: "🚪",
     fields: [
-      { key: "material",   label: "Material",             type: "select", options: ["Eman","MDF","LDSP Laminat","Akril","Plastik","Kombinatsiya"] },
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
       { key: "color",      label: "Asosiy rangi",         type: "text",   placeholder: "masalan: Oq, Wenge, Yong'oq" },
       { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 150" },
       { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
@@ -93,7 +97,8 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Komodlar"],
     emoji: "🗄️",
     fields: [
-      { key: "material",   label: "Material",             type: "select", options: ["Eman","MDF","LDSP","Akril","Plastik"] },
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang" },
       { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
       { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 100" },
@@ -107,7 +112,8 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Oshxonalar"],
     emoji: "🍳",
     fields: [
-      { key: "material",     label: "Fasad materiali",     type: "select", options: ["MDF bo'yalgan","Akril","Plastik PVC","Eman furnir","Matt laminat","Ekran"] },
+      { key: "corpusMat",    label: "Korpus materiali (karkasi)",          type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",    label: "Fasad materiali (eshik va dekorlar)", type: "select", options: ["MDF bo'yalgan (emal)","Akril","Plastik PVC","Eman furnir","Matt laminat","Ekran (reklam. plyonka)","Shisha (tempered)","Alyuminiy profil"] },
       { key: "color",        label: "Asosiy rangi",        type: "text",   placeholder: "masalan: Oq, Kulrang, Yashil" },
       { key: "shape",        label: "Rejasi (shakli)",     type: "select", options: ["To'g'ri (lineynyy)","L-shakl","U-shakl","P-shakl","Orolcha bilan"] },
       { key: "totalLen",     label: "Umumiy uzunlik",      type: "number", unit: "sm",  placeholder: "masalan: 300" },
@@ -122,8 +128,9 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Yotoqona", "Yotoqxona"],
     emoji: "🛏️",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
       { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Karavot + shkaf","Karavot + shkaf + komod"] },
-      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","MDF","LDSP Laminat","Akril","Metaldan"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Marra" },
       { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
       { key: "headboard",  label: "Bosh to'ri (izgolov'e)", type: "select", options: ["Yumshoq to'r","Qattiq to'r","Kamarli","Yog'ochdan","Maxsus dizayn"] },
@@ -136,7 +143,8 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Karavotlar"],
     emoji: "🛌",
     fields: [
-      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","Sosna","MDF","LDSP","Metal","To'r bilan metal"] },
+      { key: "corpusMat",  label: "Korpus materiali (asosiy karkasi)",  type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan qism)", type: "select", options: ["MDF bo'yalgan","Eko-teri qoplama","Mato qoplama","Yog'och massiv (eman/sosna)","Metall profil","Laminat"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang, Qora" },
       { key: "size",       label: "O'lcham (uzun × keng)", type: "select", options: ["70×160 (bola)","80×190","90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
       { key: "height",     label: "Poldan to'shak yuzasigacha", type: "number", unit: "sm", placeholder: "masalan: 45" },
@@ -150,7 +158,8 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Divonlar"],
     emoji: "🛋️",
     fields: [
-      { key: "upholstery", label: "Qoplamasi",            type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Mikrofiber","Bukle","Shenil"] },
+      { key: "corpusMat",  label: "Korpus materiali (karkas)",          type: "select", options: ["Yog'och (qayın/eman)","Metall","Plastik tayanch","Kombinatsiya (yog'och+metall)"] },
+      { key: "facadeMat",  label: "Fasad materiali (qoplama — obivka)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Mikrofiber","Bukle","Shenil","Chenille"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Bej, To'q jigarrang" },
       { key: "shape",      label: "Shakli",               type: "select", options: ["To'g'ri (klassik)","L-shakl (uglovoy)","U-shakl","Modul","Ottoman bilan"] },
       { key: "length",     label: "Uzunligi (eni)",        type: "number", unit: "sm",  placeholder: "masalan: 220" },
@@ -165,7 +174,8 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Kreslo"],
     emoji: "🪑",
     fields: [
-      { key: "upholstery", label: "Qoplamasi",            type: "select", options: ["Haqiqiy teri","Eko-teri","Mato","Velur","Bukle","Shenil"] },
+      { key: "corpusMat",  label: "Korpus materiali (karkas)",          type: "select", options: ["Yog'och (qayın/eman)","Metall","Plastik tayanch","Kombinatsiya (yog'och+metall)"] },
+      { key: "facadeMat",  label: "Fasad materiali (qoplama — obivka)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato","Velur","Bukle","Shenil","Mikrofiber"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Jigarrang, Bej, Yashil" },
       { key: "type",       label: "Kreslo turi",          type: "select", options: ["Klassik","Bergere (katta)","Ofis","Aylanadigan","Teri massaj","Salona"] },
       { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
@@ -180,8 +190,9 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Stollar"],
     emoji: "🍽️",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (oyoqlar / tayanch)", type: "select", options: ["Metall profil","Eman massiv","MDF","Plastik","Chrome metall","Kombinatsiya (metall+yog'och)"] },
+      { key: "facadeMat",  label: "Fasad materiali (stol yuzasi)",       type: "select", options: ["Eman massiv","MDF + laminat","Shisha (tempered)","Mramor (tabiiy)","Granit","Keramika","LDSP","Kvarts (kompozit)"] },
       { key: "tableType",  label: "Stol turi",            type: "select", options: ["Ovqat stoli","Kofe stoli","Yozuv stoli","Jurnal stoli","Konsolka","Burchak stoli","Transformerli"] },
-      { key: "material",   label: "Tayanch + ustki material", type: "select", options: ["Eman massiv","MDF + metal","Shisha + metal","Mramor + metal","Granit","Keramika","LDSP"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Oq, Yog'och" },
       { key: "length",     label: "Uzunligi",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
       { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 90" },
@@ -196,10 +207,10 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Stullar"],
     emoji: "💺",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (karkas / oyoqlar)", type: "select", options: ["Eman massiv","Qayın massiv","Metall xrom","Metall qora","Plastik","Kombinatsiya (yog'och+metall)"] },
+      { key: "facadeMat",  label: "Fasad materiali (o'tirgich qoplamasi)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Plastik (monolit)","Yog'och (tabiiy)","Shenil"] },
       { key: "chairType",  label: "Stul turi",            type: "select", options: ["Oshxona stuli","Ofis kreslo","Bar stuli","Mulyazh (dekorativ)","Bolalar stuli"] },
-      { key: "upholstery", label: "O'tirgich materiali",  type: "select", options: ["Teri","Eko-teri","Mato","Velur","Plastik","Yog'och"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Bej, Kulrang" },
-      { key: "frame",      label: "Karkas (oyoqlar)",     type: "select", options: ["Eman yog'och","Metall xrom","Metall qora","Plastik","Bulog'li metall"] },
       { key: "height",     label: "O'tirgich balandligi", type: "number", unit: "sm",  placeholder: "masalan: 46" },
       { key: "armrests",   label: "Qo'ltiqchalar bilan",  type: "toggle" },
       { key: "adjustable", label: "Balandlik sozlanadi",  type: "toggle" },
@@ -211,13 +222,14 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Javonlar"],
     emoji: "📚",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: [...FASAD_OPTIONS, "Metall to'r","Ochiq (fasadsiz)"] },
       { key: "shelfType",  label: "Javon turi",           type: "select", options: ["Kitob javoni","Dekorativ javon","Garderob tizimi","Oshxona javoni","Ofis javoni","Devorga mahkamlanadigan"] },
-      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","MDF","LDSP","Metal + yog'och","Metal + shisha","Metal"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Qora" },
       { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
       { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
       { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 30" },
-      { key: "shelves",    label: "Javonlar soni (bir qism)", type: "select", options: ["2","3","4","5","6","7","8","9+"] },
+      { key: "shelves",    label: "Javonlar soni",        type: "select", options: ["2","3","4","5","6","7","8","9+"] },
       { key: "doors",      label: "Eshiklar bilan",       type: "toggle" },
       { key: "wallMount",  label: "Devorga o'rnatiladi",  type: "toggle" },
       { key: "glass",      label: "Shisha eshiklar",      type: "toggle" },
@@ -227,11 +239,12 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Matraslar"],
     emoji: "💤",
     fields: [
+      { key: "corpusMat",  label: "Korpus (ichki to'ldirma) materiali", type: "select", options: ["Memory foam (viskoeластik)","Lateks (tabiiy)","Lateks (sintetik)","Kokonut qatlam","Yay: Bonnel (bog'liq)","Yay: Pocket (mustaqil)","Poliuretan köpük","Gibrid (yay+foam)"] },
+      { key: "facadeMat",  label: "Fasad (qoplama chehlа) materiali",   type: "select", options: ["Jacquard (to'qilgan)","Trikotaj mato","Aloe vera qoplama","Bambuk qatlam","Eurotop (qo'shimcha yumshoq qatlam)","3D mesh (havo o'tkazuvchi)"] },
       { key: "matType",    label: "Matras turi",          type: "select", options: ["Yay (prujina) bilan","Prujinasiz (bespruzhinniy)","Ortopedik","Memory foam","Lateks","Kokonut qatlam","Gibrid"] },
       { key: "size",       label: "O'lcham",              type: "select", options: ["60×120 (bola)","70×140","80×190","90×200","120×200","140×200","160×200","180×200","200×200"] },
       { key: "thickness",  label: "Qalinligi",            type: "number", unit: "sm",  placeholder: "masalan: 20" },
       { key: "firmness",   label: "Qattiqlik darajasi",   type: "select", options: ["Juda yumshoq","Yumshoq","O'rta-yumshoq","O'rta","O'rta-qattiq","Qattiq","Juda qattiq"] },
-      { key: "cover",      label: "Qoplama material",     type: "select", options: ["Jacquard","Mato (trikotaj)","Aloe vera","Bambuk","Eurotop (qo'shimcha yumshoq qatlam)"] },
       { key: "warranty",   label: "Kafolat",              type: "select", options: ["1 yil","2 yil","3 yil","5 yil","7 yil","10 yil","15 yil","20 yil"] },
       { key: "removeCover", label: "Qoplama yechish mumkin", type: "toggle" },
       { key: "twoSides",   label: "Ikki tomonlama (turnover)", type: "toggle" },
@@ -241,12 +254,13 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Bola xonasi"],
     emoji: "🧸",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: ["LDSP Laminat (xavfsiz)","MDF (xavfsiz)","Eman massiv","Sosna massiv","Plastik (sertifikatlangan)","Kombinatsiya"] },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: ["MDF bo'yalgan (xavfsiz emal)","Akril","Eman furnir","Matt laminat","PVC plyonka","Mato qoplama (dekorativ)"] },
       { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Burchak (uglovoy) karavot","Stol + stul","Shkaf","Ikki qavatli karavot"] },
       { key: "ageGroup",   label: "Yosh guruh",           type: "select", options: ["0–3 yosh","3–7 yosh","7–12 yosh","12–17 yosh","Universal"] },
-      { key: "material",   label: "Material",             type: "select", options: ["MDF","Eman","LDSP","Plastik (xavfsiz)","Kombinatsiya"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Pushti, Ko'k" },
       { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["60×120","70×140","80×160","80×200","90×200"] },
-      { key: "safeCoat",   label: "Xavfsiz, ekologik lak", type: "toggle" },
+      { key: "safeCoat",   label: "Xavfsiz ekologik lak / bo'yoq", type: "toggle" },
       { key: "storage",    label: "Yashirma tortmachalar bilan", type: "toggle" },
       { key: "study",      label: "Yozuv stoli bilan",    type: "toggle" },
       { key: "bunk",       label: "Ikki qavatli (supraloft)", type: "toggle" },
@@ -256,14 +270,15 @@ const CATEGORY_SPECS: CategorySpec[] = [
     names: ["Ofis mebeli"],
     emoji: "🖥️",
     fields: [
+      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
       { key: "officeType", label: "Mebelning turi",       type: "select", options: ["Ish stoli","Ofis kreslo","Kitob javoni","Yig'ma to'plam (garnitur)","Qabul stoli","Kutish xonasi divani"] },
-      { key: "material",   label: "Material",             type: "select", options: ["LDSP","MDF","Eman","Metal + shisha","Kombinatsiya"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Qora, Yong'oq" },
       { key: "deskW",      label: "Stol eni",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
       { key: "deskD",      label: "Stol chuqurligi",      type: "number", unit: "sm",  placeholder: "masalan: 70" },
       { key: "deskH",      label: "Stol balandligi",      type: "number", unit: "sm",  placeholder: "masalan: 76" },
-      { key: "pedestal",   label: "Tirgakli quti (pedestal) bilan", type: "toggle" },
-      { key: "cable",      label: "Simlar boshqaruv tizimi", type: "toggle" },
+      { key: "pedestal",   label: "Pedestal (tirqish quti) bilan", type: "toggle" },
+      { key: "cable",      label: "Sim boshqaruv tizimi", type: "toggle" },
     ],
   },
   {
