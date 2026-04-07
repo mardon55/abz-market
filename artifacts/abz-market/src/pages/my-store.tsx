@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import {
   Store, Plus, Package, Clock, CheckCircle, XCircle,
-  ChevronLeft, Trash2, X, ChevronDown, ImageIcon,
-  AlertCircle, RefreshCw, Star,
+  Trash2, X, ChevronDown, ImageIcon,
+  AlertCircle, RefreshCw, Star, Upload,
 } from "lucide-react";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,16 @@ function AddProductModal({
   const [catId, setCatId]       = useState("");
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
+  const fileInputRef            = useRef<HTMLInputElement>(null);
+
+  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError("Rasm 5MB dan kichik bo'lishi kerak"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setImageUrl(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,19 +174,51 @@ function AddProductModal({
             </div>
           </div>
 
-          {/* Image URL */}
+          {/* Image picker */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Rasm URL (ixtiyoriy)</label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Mahsulot rasmi (ixtiyoriy)</label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "relative w-full h-44 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden",
+                imageUrl
+                  ? "border-primary/40 bg-primary/5"
+                  : "border-border hover:border-primary/40 hover:bg-muted/50"
+              )}
+            >
+              {imageUrl ? (
+                <>
+                  <img src={imageUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
+                  <div className="absolute inset-0 bg-black/40 rounded-2xl flex flex-col items-center justify-center opacity-0 active:opacity-100 transition-opacity">
+                    <Upload className="w-6 h-6 text-white mb-1" />
+                    <span className="text-white text-xs font-semibold">Rasmni almashtirish</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                    <ImageIcon className="w-7 h-7 text-primary" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">Galereyadan rasm tanlang</p>
+                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP • Maks 5MB</p>
+                </>
+              )}
+            </div>
             <input
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageFile}
             />
             {imageUrl && (
-              <div className="mt-2 w-20 h-20 rounded-xl overflow-hidden bg-muted border border-border/60">
-                <img src={imageUrl} alt="preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              </div>
+              <button
+                type="button"
+                onClick={() => { setImageUrl(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                className="mt-2 text-xs text-destructive hover:underline"
+              >
+                Rasmni o'chirish
+              </button>
             )}
           </div>
 
