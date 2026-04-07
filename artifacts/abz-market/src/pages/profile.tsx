@@ -382,7 +382,7 @@ function EditProfileModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" 
         onClick={(e) => e.stopPropagation()}>
 
         <div className="shrink-0">
@@ -395,7 +395,7 @@ function EditProfileModal({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4">
+        <div className="overflow-y-auto px-5 py-5 pb-2 space-y-4 max-h-[50vh]">
           {done ? (
             <div className="flex flex-col items-center py-10 gap-4">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
@@ -581,7 +581,7 @@ function EditStoreModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" 
         onClick={(e) => e.stopPropagation()}>
 
         <div className="shrink-0">
@@ -594,7 +594,7 @@ function EditStoreModal({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4">
+        <div className="overflow-y-auto px-5 py-5 pb-2 space-y-4 max-h-[50vh]">
           {done ? (
             <div className="flex flex-col items-center py-10 gap-4">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
