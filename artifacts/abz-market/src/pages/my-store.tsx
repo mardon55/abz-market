@@ -677,7 +677,13 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /><span>{error}</span>
             </div>
           )}
-          {isEdit && (
+          {isEdit && editProduct?.status === "approved" && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2.5 rounded-xl text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+              <span>⚠️ Tasdiqlangan mahsulotni tahrirlasangiz, u admin qayta tasdiqlashiga yuboriladi va vaqtincha ko'rinmay qoladi.</span>
+            </div>
+          )}
+          {isEdit && editProduct?.status !== "approved" && (
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2.5 rounded-xl text-sm">
               <RotateCcw className="w-4 h-4 mt-0.5 shrink-0" />
               <span>Ma'lumotlarni to'g'rilang — keyin adminga qayta yuboring</span>
@@ -1087,16 +1093,27 @@ export default function MyStore() {
                       )}
                       {st === "pending" && <p className="text-[10px] text-amber-600 mt-1">⏳ Admin ko'rib chiqmoqda…</p>}
                     </div>
-                    <button
-                      onClick={async () => {
-                        if (!confirm(`"${p.name}" o'chirilsinmi?`)) return;
-                        await fetch(`/api/products/${p.id}`, { method: "DELETE" });
-                        hapticFeedback("impact");
-                        setProducts((prev) => prev.filter((x) => x.id !== p.id));
-                      }}
-                      className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-red-100 hover:text-red-500 transition-colors shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <button
+                        onClick={() => { hapticFeedback("impact"); setEditProduct(p); }}
+                        className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                        title="Tahrirlash"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`"${p.name}" o'chirilsinmi?`)) return;
+                          await fetch(`/api/products/${p.id}`, { method: "DELETE" });
+                          hapticFeedback("impact");
+                          setProducts((prev) => prev.filter((x) => x.id !== p.id));
+                        }}
+                        className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-red-100 hover:text-red-500 transition-colors"
+                        title="O'chirish"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {imgs.length > 1 && (
@@ -1117,16 +1134,10 @@ export default function MyStore() {
                           {p.rejectionReason ?? "Admin tomonidan rad etildi"}
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => { hapticFeedback("impact"); setEditProduct(p); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
-                          <Pencil className="w-3.5 h-3.5" /> Tahrirlash
-                        </button>
-                        <button onClick={() => handleQuickResubmit(p)}
-                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
-                          <RotateCcw className="w-3.5 h-3.5" /> Qayta yuborish
-                        </button>
-                      </div>
+                      <button onClick={() => handleQuickResubmit(p)}
+                        className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                        <RotateCcw className="w-3.5 h-3.5" /> O'zgartirmasdan qayta yuborish
+                      </button>
                     </div>
                   )}
                 </div>
