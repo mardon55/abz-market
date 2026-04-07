@@ -381,6 +381,7 @@ function serializeSpecs(specs: Record<string, string>, specDef: CategorySpec): s
 // ── Preset chip options ────────────────────────────────────────
 const PRESET_COLORS = ["Oq","Qora","Kulrang","Ko'k","Yashil","Qizil","Sariq","Jigarrang","Bej","Binafsha","To'q sariq","Pushti"];
 const PRESET_SIZES  = ["S","M","L","XL","XXL","XXXL"];
+const PRESET_SIZES_BED = ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"];
 const MAX_IMAGES = 6;
 
 // ── ChipInput ─────────────────────────────────────────────────
@@ -572,6 +573,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   // Get current category name and spec def
   const currentCat = categories.find((c) => c.id === catId);
   const specDef = getSpecForCategory(currentCat?.name ?? null);
+
+  const isKaravat = /karavot|karavat|kravat|bed/i.test(currentCat?.name ?? "");
+  const sizePresets = isKaravat ? PRESET_SIZES_BED : PRESET_SIZES;
 
   const handleImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -821,10 +825,13 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
           />
 
           {/* Sizes */}
-          <ChipInput label="Mavjud o'lchamlar (razmerlar)" icon={Ruler} items={sizes}
+          <ChipInput
+            label={isKaravat ? "Karavot o'lchamlari" : "Mavjud o'lchamlar (razmerlar)"}
+            icon={Ruler} items={sizes}
             onAdd={(v) => setSizes((p) => [...p, v])}
             onRemove={(i) => setSizes((p) => p.filter((_, j) => j !== i))}
-            placeholder="O'lcham kiriting (masalan: 160×80×75 sm)" presets={PRESET_SIZES}
+            placeholder={isKaravat ? "O'lcham tanlang yoki kiriting (masalan: 90×200)" : "O'lcham kiriting (masalan: 160×80×75 sm)"}
+            presets={sizePresets}
           />
 
           {/* Delivery days */}
