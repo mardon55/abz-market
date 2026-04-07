@@ -13,6 +13,13 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
 
+  // Calculate visible discount %: use explicit discount field, or derive from oldPrice
+  const discountPct = product.discount
+    ? product.discount
+    : product.oldPrice && Number(product.oldPrice) > Number(product.price)
+    ? Math.round((1 - Number(product.price) / Number(product.oldPrice)) * 100)
+    : null;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -43,9 +50,9 @@ export function ProductCard({ product }: ProductCardProps) {
                 TOP
               </Badge>
             )}
-            {product.discount ? (
+            {discountPct ? (
               <Badge className="bg-primary/90 text-primary-foreground hover:bg-primary shadow-sm text-[10px] px-1.5 py-0 h-5">
-                -{product.discount}%
+                -{discountPct}%
               </Badge>
             ) : null}
           </div>

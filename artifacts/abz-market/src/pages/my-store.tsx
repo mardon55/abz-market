@@ -25,6 +25,7 @@ interface Product {
   salesCount: number; rejectionReason: string | null;
   colors: string[] | null; sizes: string[] | null; dimensions: string | null;
   deliveryDays: number | null; quantity: number | null;
+  warranty: string | null;
 }
 interface Category { id: string; name: string; icon: string | null; }
 
@@ -547,6 +548,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const [quantity, setQuantity] = useState<string>(
     editProduct?.quantity ? String(editProduct.quantity) : "1"
   );
+  const [warranty, setWarranty] = useState<string>(
+    editProduct?.warranty ?? "1 yil"
+  );
   const [saving, setSaving]     = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [error, setError]       = useState("");
@@ -608,6 +612,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
         dimensions: dimensionsStr || null,
         deliveryDays: parseInt(deliveryDays) || 3,
         quantity: parseInt(quantity) || 1,
+        warranty: warranty || "1 yil",
       };
 
       let res: Response;
@@ -835,6 +840,28 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
                 <option value="14">7–14 kun ichida</option>
                 <option value="30">14–30 kun ichida</option>
                 <option value="0">Kelishiladi (aloqa orqali)</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Warranty */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+              🛡️ Kafolat muddati *
+            </label>
+            <div className="relative">
+              <select
+                value={warranty}
+                onChange={(e) => setWarranty(e.target.value)}
+                className="w-full h-11 px-4 pr-9 bg-muted/50 border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="3 oy">3 oy</option>
+                <option value="6 oy">6 oy</option>
+                <option value="1 yil">1 yil</option>
+                <option value="1.5 yil">1.5 yil</option>
+                <option value="2 yil">2 yil</option>
+                <option value="3 yil">3 yil</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>

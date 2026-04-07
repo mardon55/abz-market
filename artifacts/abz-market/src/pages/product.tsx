@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useProduct } from "@/hooks/use-api";
-import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, Package } from "lucide-react";
+import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCartStore } from "@/store/cart-store";
@@ -192,15 +192,6 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Stock */}
-          {(product.quantity ?? 0) > 0 && (
-            <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm text-emerald-700 font-semibold">
-                {product.quantity} ta omborda mavjud
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Store Info Mini Card */}
