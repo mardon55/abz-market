@@ -134,7 +134,7 @@ const CATEGORY_SPECS: CategorySpec[] = [
       { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
       { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Karavot + shkaf","Karavot + shkaf + komod"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Marra" },
-      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
+      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"] },
       { key: "headboard",  label: "Bosh to'ri (izgolov'e)", type: "select", options: ["Yumshoq to'r","Qattiq to'r","Kamarli","Yog'ochdan","Maxsus dizayn"] },
       { key: "storage",    label: "Qutilar bilan (yotoq ostida)", type: "toggle" },
       { key: "mattress",   label: "Matras bilan birga",   type: "toggle" },
@@ -148,7 +148,7 @@ const CATEGORY_SPECS: CategorySpec[] = [
       { key: "corpusMat",  label: "Korpus materiali (asosiy karkasi)",  type: "select", options: KORPUS_OPTIONS },
       { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan qism)", type: "select", options: ["MDF bo'yalgan","Eko-teri qoplama","Mato qoplama","Yog'och massiv (eman/sosna)","Metall profil","Laminat"] },
       { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang, Qora" },
-      { key: "size",       label: "O'lcham (uzun × keng)", type: "select", options: ["70×160 (bola)","80×190","90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
+      { key: "size",       label: "O'lcham (uzun × keng)", type: "select", options: ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"] },
       { key: "height",     label: "Poldan to'shak yuzasigacha", type: "number", unit: "sm", placeholder: "masalan: 45" },
       { key: "headboard",  label: "Bosh to'ri turi",      type: "select", options: ["Yumshoq qoplama","Qattiq yog'och","Metaldan","Kamarli","Boshi yo'q"] },
       { key: "storage",    label: "Qutilar bilan (pastda)", type: "toggle" },
@@ -382,6 +382,7 @@ function serializeSpecs(specs: Record<string, string>, specDef: CategorySpec): s
 const PRESET_COLORS = ["Oq","Qora","Kulrang","Ko'k","Yashil","Qizil","Sariq","Jigarrang","Bej","Binafsha","To'q sariq","Pushti"];
 const PRESET_SIZES  = ["S","M","L","XL","XXL","XXXL"];
 const PRESET_SIZES_BED = ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"];
+// Note: Also used for Matraslar (mattress) category
 const MAX_IMAGES = 6;
 
 // ── ChipInput ─────────────────────────────────────────────────
@@ -574,7 +575,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const currentCat = categories.find((c) => c.id === catId);
   const specDef = getSpecForCategory(currentCat?.name ?? null);
 
-  const isKaravat = /karavot|karavat|kravat|bed/i.test(currentCat?.name ?? "");
+  const isKaravat = /karavot|karavat|kravat|bed|yotoq|matras/i.test(currentCat?.name ?? "");
   const sizePresets = isKaravat ? PRESET_SIZES_BED : PRESET_SIZES;
 
   const handleImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
