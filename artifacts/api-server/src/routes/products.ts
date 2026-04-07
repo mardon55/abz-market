@@ -29,6 +29,7 @@ const PRODUCT_SELECT = {
   salesCount: productsTable.salesCount,
   status: productsTable.status,
   rejectionReason: productsTable.rejectionReason,
+  quantity: productsTable.quantity,
   createdAt: productsTable.createdAt,
 };
 
@@ -88,8 +89,8 @@ router.post("/products", async (req, res) => {
   try {
     const {
       name, price, oldPrice, description, images, categoryId, storeId,
-      isFeatured, isTopSelling, discount, colors, dimensions, warranty,
-      deliveryDays, status,
+      isFeatured, isTopSelling, discount, colors, sizes, dimensions, warranty,
+      deliveryDays, quantity, status,
     } = req.body as Record<string, unknown>;
 
     if (!name || !price || !storeId) {
@@ -113,9 +114,11 @@ router.post("/products", async (req, res) => {
         isTopSelling: isTopSelling === true,
         discount: discount ? Number(discount) : null,
         colors: Array.isArray(colors) ? (colors as string[]) : null,
+        sizes:  Array.isArray(sizes)  ? (sizes  as string[]) : null,
         dimensions: dimensions ? String(dimensions) : null,
         warranty: warranty ? String(warranty) : null,
         deliveryDays: deliveryDays ? Number(deliveryDays) : 3,
+        quantity: quantity ? Number(quantity) : 1,
         status: productStatus,
       })
       .returning({ id: productsTable.id });
@@ -140,7 +143,7 @@ router.patch("/products/:id", async (req, res) => {
     const {
       name, price, oldPrice, description, images, categoryId, storeId,
       isFeatured, isTopSelling, discount, colors, sizes, dimensions, warranty,
-      deliveryDays, action,
+      deliveryDays, quantity, action,
     } = req.body as Record<string, unknown>;
 
     const updates: Record<string, unknown> = {};
@@ -162,6 +165,7 @@ router.patch("/products/:id", async (req, res) => {
       if (dimensions !== undefined)   updates.dimensions = dimensions ? String(dimensions) : null;
       if (warranty !== undefined)     updates.warranty = warranty ? String(warranty) : null;
       if (deliveryDays !== undefined) updates.deliveryDays = deliveryDays ? Number(deliveryDays) : 3;
+      if (quantity !== undefined)     updates.quantity = quantity ? Number(quantity) : 1;
     };
 
     if (action === "approve") {
@@ -201,6 +205,38 @@ router.patch("/products/:id", async (req, res) => {
     res.json(full);
   } catch (err) {
     req.log.error({ err }, "Error updating product");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/products/:id/rate — customer rates a product (1-5)
+router.post("/products/:id/rate", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating } = req.body as { rating: number };
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be 1–5" });
+    }
+    const [product] = await db
+      .select({ rating: productsTable.rating, reviewCount: productsTable.reviewCount })
+      .from(productsTable)
+      .where(eq(productsTable.id, id));
+
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const oldCount  = product.reviewCount ?? 0;
+    const oldRating = parseFloat(String(product.rating ?? "0"));
+    const newCount  = oldCount + 1;
+    const newRating = ((oldRating * oldCount) + rating) / newCount;
+
+    await db
+      .update(productsTable)
+      .set({ rating: String(newRating.toFixed(2)), reviewCount: newCount })
+      .where(eq(productsTable.id, id));
+
+    res.json({ rating: newRating.toFixed(2), reviewCount: newCount });
+  } catch (err) {
+    req.log.error({ err }, "Error rating product");
     res.status(500).json({ error: "Internal server error" });
   }
 });

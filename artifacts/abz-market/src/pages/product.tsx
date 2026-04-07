@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useProduct } from "@/hooks/use-api";
-import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck } from "lucide-react";
+import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, Package } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCartStore } from "@/store/cart-store";
@@ -18,8 +18,35 @@ export default function ProductDetail() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
   const [selectedSize, setSelectedSize] = useState<string | undefined>();
-  
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [currentRating, setCurrentRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState<number | null>(null);
+
   const addItem = useCartStore(state => state.addItem);
+
+  const handleRate = async (stars: number) => {
+    if (ratingSubmitted || !product) return;
+    setUserRating(stars);
+    setRatingSubmitted(true);
+    try {
+      const r = await fetch(`/api/products/${product.id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: stars }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setCurrentRating(parseFloat(d.rating));
+        setReviewCount(d.reviewCount);
+        toast({ title: "⭐ Rahmat!", description: `Siz ${stars} ball berdingiz.` });
+      }
+    } catch {
+      setRatingSubmitted(false);
+      setUserRating(0);
+    }
+  };
 
   // Sync embla selection
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -97,7 +124,10 @@ export default function ProductDetail() {
             </h1>
             <div className="flex items-center gap-1 bg-warning/10 text-warning px-2 py-1 rounded-lg shrink-0 mt-1">
               <Star className="w-4 h-4 fill-warning" />
-              <span className="font-bold text-sm">{product.rating}</span>
+              <span className="font-bold text-sm">
+                {currentRating !== null ? currentRating.toFixed(1) : Number(product.rating || 0).toFixed(1)}
+              </span>
+              <span className="text-[10px] text-warning/70">({reviewCount ?? product.reviewCount ?? 0})</span>
             </div>
           </div>
           
@@ -122,15 +152,20 @@ export default function ProductDetail() {
         <div className="space-y-5 mb-8 border-y border-border/50 py-5">
           {product.colors && product.colors.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold mb-3">Rang:</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-sm font-semibold mb-3">🎨 Rang tanlang:</h3>
+              <div className="flex flex-wrap gap-2">
                 {product.colors.map(color => (
                   <button
                     key={color}
                     onClick={() => setSelectedColor(color)}
-                    className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === color ? 'border-primary scale-110 shadow-md' : 'border-border/50'}`}
-                    style={{ backgroundColor: color }}
-                  />
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                      selectedColor === color
+                        ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                        : 'bg-background text-foreground border-border hover:bg-secondary'
+                    }`}
+                  >
+                    {color}
+                  </button>
                 ))}
               </div>
             </div>
@@ -138,15 +173,15 @@ export default function ProductDetail() {
 
           {product.sizes && product.sizes.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold mb-3">O'lcham:</h3>
+              <h3 className="text-sm font-semibold mb-3">📐 O'lcham tanlang:</h3>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map(size => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
-                      selectedSize === size 
-                        ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20' 
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                      selectedSize === size
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
                         : 'bg-background text-foreground border-border hover:bg-secondary'
                     }`}
                   >
@@ -154,6 +189,16 @@ export default function ProductDetail() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Stock */}
+          {(product.quantity ?? 0) > 0 && (
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm text-emerald-700 font-semibold">
+                {product.quantity} ta omborda mavjud
+              </span>
             </div>
           )}
         </div>
@@ -191,13 +236,49 @@ export default function ProductDetail() {
         </div>
 
         {/* Description */}
-        <div>
+        <div className="mb-6">
           <h3 className="font-display font-bold text-lg mb-3">Tavsif</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {product.description}
-            <br/><br/>
-            <strong>O'lchamlari:</strong> {product.dimensions}
           </p>
+          {product.dimensions && (
+            <p className="text-sm text-muted-foreground mt-2">
+              <strong>O'lchamlari:</strong> {product.dimensions}
+            </p>
+          )}
+        </div>
+
+        {/* Interactive Rating */}
+        <div className="bg-secondary/30 border border-border/50 rounded-2xl p-4">
+          <h3 className="font-bold text-sm mb-3">
+            {ratingSubmitted ? "✅ Bahoyingiz qabul qilindi!" : "⭐ Mahsulotni baholang"}
+          </h3>
+          <div className="flex items-center gap-1" role="group" aria-label="Mahsulotni baholash">
+            {[1, 2, 3, 4, 5].map(star => {
+              const active = ratingSubmitted ? star <= userRating : star <= hoverRating;
+              return (
+                <button
+                  key={star}
+                  disabled={ratingSubmitted}
+                  onClick={() => handleRate(star)}
+                  onMouseEnter={() => !ratingSubmitted && setHoverRating(star)}
+                  onMouseLeave={() => !ratingSubmitted && setHoverRating(0)}
+                  className={`p-1 transition-all ${ratingSubmitted ? "cursor-default" : "cursor-pointer hover:scale-125"}`}
+                >
+                  <Star
+                    className={`w-8 h-8 transition-colors ${active ? "fill-yellow-400 text-yellow-400" : "text-border fill-border"}`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {!ratingSubmitted && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {hoverRating > 0
+                ? ["", "Yomon", "O'rtacha", "Yaxshi", "Juda yaxshi", "A'lo!"][hoverRating]
+                : "Yulduzcha bosing"}
+            </p>
+          )}
         </div>
       </div>
 

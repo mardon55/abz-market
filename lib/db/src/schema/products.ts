@@ -49,6 +49,7 @@ export const productsTable = pgTable("products", {
   isFeatured: boolean("is_featured").default(false),
   discount: integer("discount"),
   salesCount: integer("sales_count").default(0),
+  quantity: integer("quantity").default(1),
   status: text("status").notNull().default("approved"),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),

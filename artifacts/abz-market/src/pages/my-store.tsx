@@ -24,6 +24,7 @@ interface Product {
   description: string | null; rating: string; reviewCount: number;
   salesCount: number; rejectionReason: string | null;
   colors: string[] | null; sizes: string[] | null; dimensions: string | null;
+  deliveryDays: number | null; quantity: number | null;
 }
 interface Category { id: string; name: string; icon: string | null; }
 
@@ -543,6 +544,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const [deliveryDays, setDeliveryDays] = useState<string>(
     editProduct?.deliveryDays ? String(editProduct.deliveryDays) : "3"
   );
+  const [quantity, setQuantity] = useState<string>(
+    editProduct?.quantity ? String(editProduct.quantity) : "1"
+  );
   const [saving, setSaving]     = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [error, setError]       = useState("");
@@ -603,6 +607,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
         sizes: sizes.length ? sizes : null,
         dimensions: dimensionsStr || null,
         deliveryDays: parseInt(deliveryDays) || 3,
+        quantity: parseInt(quantity) || 1,
       };
 
       let res: Response;
@@ -833,6 +838,22 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+              📦 Ombordagi miqdor (dona) *
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="9999"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="1"
+              className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
           </div>
 
           {/* Description */}

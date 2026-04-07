@@ -17,6 +17,9 @@ interface ApiProduct {
   oldPrice: string | null;
   description: string | null;
   images: string[] | null;
+  colors: string[] | null;
+  sizes: string[] | null;
+  dimensions: string | null;
   categoryId: string | null;
   categoryName: string | null;
   storeId: string;
@@ -29,6 +32,8 @@ interface ApiProduct {
   salesCount: number;
   status: string;
   rejectionReason: string | null;
+  deliveryDays: number | null;
+  quantity: number | null;
   createdAt: string | null;
 }
 
@@ -760,43 +765,198 @@ function ProductModal({
 // ── View modal ────────────────────────────────────────────────────────────────
 function ViewModal({ product, onClose, onEdit }: { product: ApiProduct; onClose: () => void; onEdit: () => void }) {
   const catDef = CATEGORIES.find((c) => c.name === product.categoryName);
-  const img = product.images?.[0];
+  const images = product.images ?? [];
+  const [imgIdx, setImgIdx] = useState(0);
+
+  const statusBadge: Record<string, string> = {
+    approved: "bg-emerald-100 text-emerald-700",
+    pending: "bg-amber-100 text-amber-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+  const statusLabel: Record<string, string> = {
+    approved: "✅ Tasdiqlangan",
+    pending: "⏳ Kutilmoqda",
+    rejected: "❌ Rad etilgan",
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative ml-auto w-full max-w-lg h-full bg-background shadow-2xl flex flex-col overflow-hidden">
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-card shrink-0">
           <h2 className="font-display font-bold text-base">Mahsulot ma'lumotlari</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button>
         </div>
+
         <div className="flex-1 overflow-y-auto">
-          {img && <img src={img} alt={product.name} className="w-full h-52 object-cover" />}
-          <div className="p-5 space-y-4">
+          {/* Image gallery */}
+          {images.length > 0 && (
+            <div className="relative bg-gray-100">
+              <img
+                src={images[imgIdx]}
+                alt={product.name}
+                className="w-full h-56 object-contain"
+              />
+              {images.length > 1 && (
+                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImgIdx(i)}
+                      className={`w-2 h-2 rounded-full transition-all ${i === imgIdx ? "bg-primary scale-125" : "bg-white/70"}`}
+                    />
+                  ))}
+                </div>
+              )}
+              {images.length > 1 && (
+                <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                  {imgIdx + 1}/{images.length}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="p-5 space-y-5">
+            {/* Name + category + status */}
             <div>
-              {product.categoryName && <span className="badge badge-primary">{catDef?.emoji ?? "📦"} {product.categoryName}</span>}
-              <h3 className="font-display font-bold text-xl mt-2">{product.name}</h3>
-              <p className="text-muted-foreground text-sm mt-1">{product.storeName}</p>
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                {product.categoryName && (
+                  <span className="badge badge-primary">{catDef?.emoji ?? "📦"} {product.categoryName}</span>
+                )}
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${statusBadge[product.status] ?? "bg-muted text-foreground"}`}>
+                  {statusLabel[product.status] ?? product.status}
+                </span>
+              </div>
+              <h3 className="font-display font-bold text-xl">{product.name}</h3>
+              <p className="text-muted-foreground text-sm mt-0.5">🏪 {product.storeName}</p>
             </div>
-            <div className="flex items-center gap-4 flex-wrap">
+
+            {/* Rejection reason */}
+            {product.status === "rejected" && product.rejectionReason && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                <p className="text-xs font-semibold text-red-700 mb-1">❌ Rad etish sababi:</p>
+                <p className="text-sm text-red-700">{product.rejectionReason}</p>
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="flex items-center gap-4 flex-wrap bg-muted/40 rounded-xl p-3">
               <div>
+                <div className="text-xs text-muted-foreground mb-0.5">Narx</div>
                 <div className="font-bold text-lg text-primary">{fmt(Number(product.price))}</div>
-                {product.oldPrice && <div className="text-xs text-muted-foreground line-through">{fmt(Number(product.oldPrice))}</div>}
+                {product.oldPrice && (
+                  <div className="text-xs text-muted-foreground line-through">{fmt(Number(product.oldPrice))}</div>
+                )}
               </div>
-              {product.isFeatured && <span className="badge badge-info">⭐ Tavsiya etilgan</span>}
-              <div className="ml-auto flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                <span className="font-semibold text-sm">{Number(product.rating).toFixed(1)}</span>
-                <span className="text-muted-foreground text-xs">({product.reviewCount})</span>
+              {product.discount && (
+                <span className="badge badge-error">-{product.discount}%</span>
+              )}
+              <div className="ml-auto text-right">
+                <div className="text-xs text-muted-foreground mb-0.5">Reyting</div>
+                <div className="flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span className="font-semibold text-sm">{Number(product.rating || 0).toFixed(1)}</span>
+                  <span className="text-muted-foreground text-xs">({product.reviewCount ?? 0})</span>
+                </div>
               </div>
             </div>
+
+            {/* Key info grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-muted/40 rounded-xl p-3">
+                <div className="text-xs text-muted-foreground mb-1">📦 Ombor</div>
+                <div className="font-semibold text-sm">{product.quantity ?? 1} dona</div>
+              </div>
+              <div className="bg-muted/40 rounded-xl p-3">
+                <div className="text-xs text-muted-foreground mb-1">🚚 Yetkazish</div>
+                <div className="font-semibold text-sm">
+                  {product.deliveryDays === 0 ? "Kelishiladi" : `${product.deliveryDays ?? 3} kun`}
+                </div>
+              </div>
+              {product.isFeatured && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <div className="font-semibold text-sm text-amber-700">⭐ Tavsiya etilgan</div>
+                </div>
+              )}
+              {product.isTopSelling && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  <div className="font-semibold text-sm text-emerald-700">🔥 Ko'p sotilgan</div>
+                </div>
+              )}
+            </div>
+
+            {/* Colors */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">🎨 Ranglar</h4>
+                <div className="flex flex-wrap gap-2">
+                  {product.colors.map((c) => (
+                    <span key={c} className="px-3 py-1 bg-muted rounded-xl text-sm font-medium">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sizes */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">📐 O'lchamlar</h4>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((s) => (
+                    <span key={s} className="px-3 py-1 bg-muted rounded-xl text-sm font-medium">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Specs/dimensions */}
+            {product.dimensions && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">📏 Texnik xususiyatlar</h4>
+                <div className="bg-muted/40 rounded-xl p-3 space-y-1">
+                  {product.dimensions.split("|").map((line, i) => {
+                    const [label, ...rest] = line.split(":");
+                    return (
+                      <div key={i} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{label?.trim()}</span>
+                        <span className="font-medium">{rest.join(":").trim()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
             {product.description && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tavsif</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">📝 Tavsif</h4>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{product.description}</p>
+              </div>
+            )}
+
+            {/* All images */}
+            {images.length > 1 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">🖼️ Barcha rasmlar ({images.length})</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {images.map((src, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImgIdx(i)}
+                      className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${i === imgIdx ? "border-primary" : "border-transparent"}`}
+                    >
+                      <img src={src} alt={`Rasm ${i + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Footer */}
         <div className="shrink-0 border-t border-border/60 bg-card px-5 py-4 flex gap-3">
           <button onClick={onClose} className="flex-1 h-10 bg-muted rounded-xl text-sm font-semibold">Yopish</button>
           <button onClick={onEdit} className="flex-1 h-10 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90">Tahrirlash</button>
@@ -982,6 +1142,13 @@ export default function Products() {
 
                       {/* Action buttons */}
                       <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => { setActive(p); setModal("view"); }}
+                          className="w-10 flex items-center justify-center rounded-xl bg-muted border border-border/60 py-2.5 hover:bg-muted/80 transition-colors shrink-0"
+                          title="Ko'rish"
+                        >
+                          <Eye className="w-4 h-4 text-foreground" />
+                        </button>
                         <button
                           onClick={() => setRejectModal(p)}
                           disabled={approveMutation.isPending || rejectMutation.isPending}
