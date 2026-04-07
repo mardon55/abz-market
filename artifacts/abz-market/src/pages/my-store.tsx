@@ -994,11 +994,19 @@ function EditStoreModal({
         onClick={(e) => e.stopPropagation()}>
         <div className="shrink-0">
           <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
-            <h2 className="font-display font-bold text-base">Do'konni sozlash</h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border/60">
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
               <X className="w-4 h-4" />
             </button>
+            <h2 className="font-display font-bold text-sm flex-1 text-center">Do'konni sozlash</h2>
+            {!done && storeData !== null && (
+              <button onClick={handleSave} disabled={saving}
+                className="shrink-0 h-8 px-4 bg-primary text-white font-bold text-sm rounded-xl flex items-center gap-1.5 disabled:opacity-60 active:scale-95 transition-transform">
+                {saving
+                  ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  : <><Save className="w-3.5 h-3.5" /> Saqlash</>}
+              </button>
+            )}
           </div>
         </div>
         <div className="overflow-y-auto px-5 py-5 pb-2 space-y-4 max-h-[50vh]">
@@ -1071,17 +1079,6 @@ function EditStoreModal({
           )}
         </div>
 
-        {/* Fixed footer – always visible */}
-        {!done && storeData !== null && (
-          <div className="shrink-0 px-5 pb-6 pt-3 border-t border-border/40 bg-background">
-            <button onClick={handleSave} disabled={saving}
-              className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
-              {saving
-                ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                : <><Save className="w-5 h-5" /> Saqlash</>}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
