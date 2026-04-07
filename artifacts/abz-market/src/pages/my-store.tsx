@@ -1067,16 +1067,21 @@ function EditStoreModal({
                   placeholder="Do'kon haqida qisqacha ma'lumot..."
                   className="w-full px-4 py-3 bg-muted/50 border border-border/60 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
-              {/* Save */}
-              <button onClick={handleSave} disabled={saving}
-                className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
-                {saving
-                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  : <><Save className="w-5 h-5" /> Saqlash</>}
-              </button>
             </>
           )}
         </div>
+
+        {/* Fixed footer – always visible */}
+        {!done && storeData !== null && (
+          <div className="shrink-0 px-5 pb-6 pt-3 border-t border-border/40 bg-background">
+            <button onClick={handleSave} disabled={saving}
+              className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
+              {saving
+                ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                : <><Save className="w-5 h-5" /> Saqlash</>}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
