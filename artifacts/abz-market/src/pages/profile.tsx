@@ -1,14 +1,24 @@
 import { useState, useEffect } from "react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Settings, Package, Heart, MapPin, CreditCard,
   HelpCircle, LogOut, ChevronRight, Store, BarChart2,
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
-  ShoppingBag, Star, Bell,
+  ShoppingBag, Star, Bell, Clock, CheckCircle, XCircle,
+  Plus,
 } from "lucide-react";
 import { hapticFeedback, useTelegram } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
+
+// ── Seller store helpers ──────────────────────────────────────
+interface SellerInfo { storeId: string; storeName: string; }
+function loadSellerInfo(): SellerInfo | null {
+  try {
+    const raw = localStorage.getItem("abz_seller");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 const ADMIN_TG_ID = 6271849608;
 const ADMIN_TOKEN = "abz_admin_tg_" + ADMIN_TG_ID;
@@ -262,11 +272,111 @@ function RegisterSheet({
   );
 }
 
+// ── Seller store card ─────────────────────────────────────────
+function SellerStoreCard({ storeId, storeName }: { storeId: string; storeName: string }) {
+  const [storeStatus, setStoreStatus] = useState<"loading" | "pending" | "approved" | "rejected">("loading");
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    fetch(`/api/stores/${storeId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => {
+        if (!s) return setStoreStatus("rejected");
+        if (s.type === "pending")   return setStoreStatus("pending");
+        if (s.type === "rejected")  return setStoreStatus("rejected");
+        if (s.isVerified)           return setStoreStatus("approved");
+        setStoreStatus("pending");
+      })
+      .catch(() => setStoreStatus("pending"));
+  }, [storeId]);
+
+  if (storeStatus === "loading") return null;
+
+  if (storeStatus === "approved") {
+    return (
+      <div className="mx-4 mb-5">
+        <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
+        <div className="glass-card rounded-3xl overflow-hidden shadow-ios-sm">
+          <Link
+            href="/my-store"
+            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30"
+            onClick={() => hapticFeedback("selection")}
+          >
+            <div className="w-9 h-9 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <Store className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <div className="font-medium text-sm">{storeName}</div>
+              <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" /> Tasdiqlangan do'kon
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+          <Link
+            href="/analytics"
+            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors"
+            onClick={() => hapticFeedback("selection")}
+          >
+            <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <BarChart2 className="w-4 h-4 text-primary" />
+            </div>
+            <span className="flex-1 font-medium text-sm">Analitika</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (storeStatus === "pending") {
+    return (
+      <div className="mx-4 mb-5">
+        <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
+        <div className="glass-card rounded-3xl px-4 py-4 shadow-ios-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">{storeName}</div>
+            <div className="text-[12px] text-amber-600 font-medium mt-0.5">Ariza admin tasdiqlashini kutmoqda</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-4 mb-5">
+      <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
+      <div className="glass-card rounded-3xl px-4 py-4 shadow-ios-sm">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+            <XCircle className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <div className="font-semibold text-sm">Ariza rad etildi</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Qayta ariza yuborish mumkin</div>
+          </div>
+        </div>
+        <Link
+          href="/register-store"
+          className="w-full h-10 bg-primary text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+          onClick={() => hapticFeedback("impact")}
+        >
+          <Plus className="w-4 h-4" /> Qayta ro'yxatdan o'tish
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ── Main profile page ─────────────────────────────────────────
 export default function Profile() {
   const [user, setUser]             = useState<UserProfile | null>(null);
   const [showSheet, setShowSheet]   = useState(false);
   const [showLogout, setShowLogout] = useState(false);
+  const [sellerInfo, setSellerInfo] = useState<SellerInfo | null>(null);
   const { user: tgUser } = useTelegram();
 
   const isAdmin = tgUser?.id === ADMIN_TG_ID;
@@ -279,25 +389,22 @@ export default function Profile() {
 
   useEffect(() => {
     setUser(loadProfile());
+    setSellerInfo(loadSellerInfo());
   }, []);
 
   const handleLogout = () => {
     hapticFeedback("impact");
     clearProfile();
     setUser(null);
+    setSellerInfo(null);
     setShowLogout(false);
   };
 
   const menuItems = [
-    { icon: Package,    label: "Buyurtmalarim",     path: "/orders" },
+    { icon: Package,    label: "Buyurtmalarim",       path: "/orders" },
     { icon: Heart,      label: "Sevimli mahsulotlar", path: "/favorites" },
-    { icon: MapPin,     label: "Manzillarim",        path: "/addresses" },
-    { icon: CreditCard, label: "To'lov usullari",    path: "/payments" },
-  ];
-
-  const sellerItems = [
-    { icon: Store,    label: "Mening do'konim", path: "/store/s1" },
-    { icon: BarChart2, label: "Analitika",      path: "/analytics" },
+    { icon: MapPin,     label: "Manzillarim",         path: "/addresses" },
+    { icon: CreditCard, label: "To'lov usullari",     path: "/payments" },
   ];
 
   const settingsItems = [
@@ -431,8 +538,31 @@ export default function Profile() {
           </div>
 
           {/* Menu sections */}
-          <MenuSection items={menuItems}   title="Asosiy" />
-          <MenuSection items={sellerItems} title="Sotuvchi paneli" />
+          <MenuSection items={menuItems} title="Asosiy" />
+
+          {/* Seller section — dynamic based on store registration status */}
+          {sellerInfo ? (
+            <SellerStoreCard storeId={sellerInfo.storeId} storeName={sellerInfo.storeName} />
+          ) : (
+            <div className="mx-4 mb-5">
+              <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
+              <Link
+                href="/register-store"
+                className="glass-card rounded-3xl px-4 py-3.5 flex items-center gap-3 shadow-ios-sm active:bg-black/5 transition-colors"
+                onClick={() => hapticFeedback("impact")}
+              >
+                <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Store className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">Do'kon ochish</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">ABZ Market'da sotuvchi bo'ling</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </Link>
+            </div>
+          )}
+
           <MenuSection items={settingsItems} title="Qo'shimcha" />
 
           {/* Admin Panel button — only for admin */}

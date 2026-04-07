@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Plus, Edit2, Trash2, Eye, Star, X, Upload,
   ImageIcon, ChevronDown, Check, Package, RefreshCw, AlertCircle,
+  CheckCircle, XCircle, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ interface ApiProduct {
   isTopSelling: boolean;
   discount: number | null;
   salesCount: number;
+  status: string;
 }
 
 interface ApiCategory { id: string; name: string; icon: string | null; }
@@ -138,10 +140,30 @@ const CATEGORIES: { name: string; emoji: string; fields: FieldDef[] }[] = [
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function fetchProducts(): Promise<ApiProduct[]> {
-  const r = await fetch("/api/products?limit=100");
+  const r = await fetch("/api/products?status=all&limit=200");
   if (!r.ok) throw new Error("Mahsulotlar yuklanmadi");
   const data = await r.json();
   return data.products ?? [];
+}
+
+async function approveProduct(id: string): Promise<ApiProduct> {
+  const r = await fetch(`/api/products/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "approve" }),
+  });
+  if (!r.ok) throw new Error("Tasdiqlashda xato");
+  return r.json();
+}
+
+async function rejectProduct(id: string): Promise<ApiProduct> {
+  const r = await fetch(`/api/products/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "reject" }),
+  });
+  if (!r.ok) throw new Error("Rad etishda xato");
+  return r.json();
 }
 
 async function fetchCategories(): Promise<ApiCategory[]> {
@@ -665,13 +687,14 @@ export default function Products() {
   const qc = useQueryClient();
   const [search, setSearch]         = useState("");
   const [catFilter, setCatFilter]   = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "approved" | "pending" | "rejected">("all");
   const [modal, setModal]           = useState<"add" | "edit" | "view" | null>(null);
   const [active, setActive]         = useState<ApiProduct | null>(null);
 
   const { data: products = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-products"],
     queryFn: fetchProducts,
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
 
   const deleteMutation = useMutation({
@@ -679,10 +702,23 @@ export default function Products() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: approveProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: rejectProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+  });
+
+  const pendingProducts = products.filter((p) => p.status === "pending");
+
   const filtered = products.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.storeName ?? "").toLowerCase().includes(search.toLowerCase());
     const matchCat = catFilter === "all" || p.categoryName === catFilter;
-    return matchSearch && matchCat;
+    const matchStatus = statusFilter === "all" || p.status === statusFilter;
+    return matchSearch && matchCat && matchStatus;
   });
 
   const handleDelete = (id: string) => {
@@ -695,7 +731,7 @@ export default function Products() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display font-bold text-2xl">Mahsulotlar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{products.length} ta mahsulot</p>
@@ -716,6 +752,43 @@ export default function Products() {
         </div>
       </div>
 
+      {/* Pending approval banner */}
+      {pendingProducts.length > 0 && statusFilter !== "pending" && (
+        <div
+          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 cursor-pointer hover:bg-amber-100 transition-colors"
+          onClick={() => setStatusFilter("pending")}
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800 text-sm">{pendingProducts.length} ta mahsulot tasdiqlashni kutmoqda</p>
+            <p className="text-xs text-amber-600 mt-0.5">Sotuvchilar tomonidan qo'shilgan — Ko'rish uchun bosing</p>
+          </div>
+          <CheckCircle className="w-5 h-5 text-amber-500" />
+        </div>
+      )}
+
+      {/* Status filter tabs */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1 hide-scrollbar">
+        {([
+          { val: "all",      label: "Barchasi",     count: products.length },
+          { val: "approved", label: "Tasdiqlangan", count: products.filter(p => p.status === "approved").length },
+          { val: "pending",  label: "Kutilmoqda",   count: pendingProducts.length },
+          { val: "rejected", label: "Rad etilgan",  count: products.filter(p => p.status === "rejected").length },
+        ] as const).map(({ val, label, count }) => (
+          <button
+            key={val}
+            onClick={() => setStatusFilter(val)}
+            className={cn("shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
+              statusFilter === val ? "bg-primary text-white border-primary" : "bg-card border-border/60 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {label} <span className="opacity-70">({count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* Category quick-filter */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-3 hide-scrollbar">
         <button
@@ -724,7 +797,7 @@ export default function Products() {
             catFilter === "all" ? "bg-primary text-white border-primary" : "bg-card border-border/60 text-muted-foreground hover:text-foreground"
           )}
         >
-          Barchasi ({products.length})
+          Barchasi
         </button>
         {CATEGORIES.map((c) => {
           const count = products.filter((p) => p.categoryName === c.name).length;
@@ -748,7 +821,7 @@ export default function Products() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           type="search"
-          placeholder="Mahsulot qidirish..."
+          placeholder="Mahsulot, do'kon qidirish..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 h-9 bg-card border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -823,25 +896,52 @@ export default function Products() {
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        {p.isFeatured
+                        {p.status === "pending"
+                          ? <span className="badge badge-warning"><Clock className="w-3 h-3" /> Kutilmoqda</span>
+                          : p.status === "rejected"
+                          ? <span className="badge badge-danger"><XCircle className="w-3 h-3" /> Rad etilgan</span>
+                          : p.isFeatured
                           ? <span className="badge badge-info">⭐ Tavsiya</span>
-                          : <span className="badge badge-muted">Oddiy</span>
+                          : <span className="badge badge-success"><CheckCircle className="w-3 h-3" /> Tasdiqlangan</span>
                         }
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => { setActive(p); setModal("view"); }}
-                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-violet-100 hover:text-violet-700 transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => { setActive(p); setModal("edit"); }}
-                            className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          {p.status === "pending" ? (
+                            <>
+                              <button
+                                onClick={() => rejectMutation.mutate(p.id)}
+                                disabled={rejectMutation.isPending || approveMutation.isPending}
+                                title="Rad etish"
+                                className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-colors disabled:opacity-50"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => approveMutation.mutate(p.id)}
+                                disabled={approveMutation.isPending || rejectMutation.isPending}
+                                title="Tasdiqlash"
+                                className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-200 transition-colors disabled:opacity-50"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => { setActive(p); setModal("view"); }}
+                                className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-violet-100 hover:text-violet-700 transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => { setActive(p); setModal("edit"); }}
+                                className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => handleDelete(p.id)}
                             disabled={deleteMutation.isPending}

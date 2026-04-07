@@ -135,6 +135,15 @@ export default function RegisterStore() {
         }),
       });
       if (!res.ok) throw new Error("Server xatosi");
+      const storeResult = await res.json();
+      if (storeResult?.id) {
+        try {
+          localStorage.setItem(
+            "abz_seller",
+            JSON.stringify({ storeId: storeResult.id, storeName: step1Data!.name }),
+          );
+        } catch {}
+      }
     } catch {
       // Even on error, show waiting screen — request may have gone through
     }
