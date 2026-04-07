@@ -28,6 +28,8 @@ interface ApiProduct {
   discount: number | null;
   salesCount: number;
   status: string;
+  rejectionReason: string | null;
+  createdAt: string | null;
 }
 
 interface ApiCategory { id: string; name: string; icon: string | null; }
@@ -156,11 +158,11 @@ async function approveProduct(id: string): Promise<ApiProduct> {
   return r.json();
 }
 
-async function rejectProduct(id: string): Promise<ApiProduct> {
+async function rejectProduct({ id, reason }: { id: string; reason: string }): Promise<ApiProduct> {
   const r = await fetch(`/api/products/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "reject" }),
+    body: JSON.stringify({ action: "reject", rejectionReason: reason }),
   });
   if (!r.ok) throw new Error("Rad etishda xato");
   return r.json();
@@ -690,11 +692,14 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState<"all" | "approved" | "pending" | "rejected">("all");
   const [modal, setModal]           = useState<"add" | "edit" | "view" | null>(null);
   const [active, setActive]         = useState<ApiProduct | null>(null);
+  const [view, setView]             = useState<"list" | "new">("list");
+  const [rejectModal, setRejectModal] = useState<ApiProduct | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const { data: products = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-products"],
     queryFn: fetchProducts,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
 
   const deleteMutation = useMutation({
@@ -709,7 +714,11 @@ export default function Products() {
 
   const rejectMutation = useMutation({
     mutationFn: rejectProduct,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-products"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      setRejectModal(null);
+      setRejectReason("");
+    },
   });
 
   const pendingProducts = products.filter((p) => p.status === "pending");
@@ -728,6 +737,12 @@ export default function Products() {
 
   const closeModal = () => { setModal(null); setActive(null); };
 
+  const handleRejectSubmit = () => {
+    if (!rejectModal) return;
+    if (!rejectReason.trim()) return;
+    rejectMutation.mutate({ id: rejectModal.id, reason: rejectReason.trim() });
+  };
+
   return (
     <div>
       {/* Header */}
@@ -736,12 +751,32 @@ export default function Products() {
           <h1 className="font-display font-bold text-2xl">Mahsulotlar</h1>
           <p className="text-muted-foreground text-sm mt-0.5">{products.length} ta mahsulot</p>
         </div>
-        <div className="flex gap-2 self-start sm:self-auto">
+        <div className="flex gap-2 self-start sm:self-auto flex-wrap">
           <button
             onClick={() => refetch()}
             className="flex items-center gap-1.5 bg-muted border border-border/60 text-foreground px-3 py-2 rounded-xl text-sm font-semibold hover:bg-muted/80 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setView(view === "new" ? "list" : "new")}
+            className={cn(
+              "relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
+              view === "new"
+                ? "bg-amber-500 text-white hover:bg-amber-600"
+                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+            )}
+          >
+            <Clock className="w-4 h-4" />
+            Yangi mahsulotlar
+            {pendingProducts.length > 0 && (
+              <span className={cn(
+                "ml-0.5 min-w-[18px] h-[18px] rounded-full text-[11px] font-bold flex items-center justify-center px-1",
+                view === "new" ? "bg-white text-amber-600" : "bg-amber-500 text-white"
+              )}>
+                {pendingProducts.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => { setActive(null); setModal("add"); }}
@@ -752,20 +787,104 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Pending approval banner */}
-      {pendingProducts.length > 0 && statusFilter !== "pending" && (
-        <div
-          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 cursor-pointer hover:bg-amber-100 transition-colors"
-          onClick={() => setStatusFilter("pending")}
-        >
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+      {/* ── Yangi mahsulotlar view ─────────────────────────────────────────────── */}
+      {view === "new" && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-amber-600" />
+            <h2 className="font-display font-bold text-lg">Yangi mahsulotlar</h2>
+            <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pendingProducts.length} ta kutilmoqda</span>
           </div>
-          <div className="flex-1">
-            <p className="font-semibold text-amber-800 text-sm">{pendingProducts.length} ta mahsulot tasdiqlashni kutmoqda</p>
-            <p className="text-xs text-amber-600 mt-0.5">Sotuvchilar tomonidan qo'shilgan — Ko'rish uchun bosing</p>
-          </div>
-          <CheckCircle className="w-5 h-5 text-amber-500" />
+          {pendingProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-card border border-border/60 rounded-2xl">
+              <CheckCircle className="w-12 h-12 mb-3 text-emerald-400 opacity-60" />
+              <p className="font-semibold text-sm">Barcha mahsulotlar ko'rib chiqilgan</p>
+              <p className="text-xs mt-1">Hozircha tasdiqlashni kutayotgan mahsulot yo'q</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pendingProducts.map((p) => {
+                const img = p.images?.[0];
+                const catEmoji = CATEGORIES.find((c) => c.name === p.categoryName)?.emoji ?? "📦";
+                return (
+                  <div key={p.id} className="bg-card border border-amber-200 rounded-2xl overflow-hidden shadow-sm">
+                    {/* Image */}
+                    <div className="relative w-full h-48 bg-muted">
+                      {img ? (
+                        <img src={img} alt={p.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+                          <ImageIcon className="w-10 h-10 opacity-30 mb-2" />
+                          <span className="text-xs">Rasm yuklanmagan</span>
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3">
+                        <span className="badge badge-warning flex items-center gap-1"><Clock className="w-3 h-3" /> Kutilmoqda</span>
+                      </div>
+                      {p.createdAt && (
+                        <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-lg">
+                          {new Date(p.createdAt).toLocaleDateString("uz-UZ")}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-display font-bold text-base leading-tight line-clamp-2">{p.name}</h3>
+                        {p.categoryName && (
+                          <span className="badge badge-primary shrink-0">{catEmoji} {p.categoryName}</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-bold text-lg text-primary">{fmt(Number(p.price))}</span>
+                        {p.oldPrice && (
+                          <span className="text-sm text-muted-foreground line-through">{fmt(Number(p.oldPrice))}</span>
+                        )}
+                        {p.discount && (
+                          <span className="badge badge-danger">-{p.discount}%</span>
+                        )}
+                      </div>
+
+                      {p.storeName && (
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+                          <Package className="w-3.5 h-3.5" />
+                          <span className="font-semibold">{p.storeName}</span>
+                        </div>
+                      )}
+
+                      {p.description && (
+                        <p className="text-sm text-foreground/70 line-clamp-3 mb-3 bg-muted/40 rounded-xl px-3 py-2">{p.description}</p>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => setRejectModal(p)}
+                          disabled={approveMutation.isPending || rejectMutation.isPending}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold text-sm hover:bg-red-100 transition-colors border border-red-200 disabled:opacity-50"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Rad etish
+                        </button>
+                        <button
+                          onClick={() => approveMutation.mutate(p.id)}
+                          disabled={approveMutation.isPending || rejectMutation.isPending}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-200 disabled:opacity-50"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          {approveMutation.isPending ? "Tasdiqlanmoqda..." : "Tasdiqlash"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="border-t border-border/40 my-6" />
+          <h2 className="font-display font-bold text-lg mb-4">Barcha mahsulotlar ro'yxati</h2>
         </div>
       )}
 
@@ -910,16 +1029,15 @@ export default function Products() {
                           {p.status === "pending" ? (
                             <>
                               <button
-                                onClick={() => rejectMutation.mutate(p.id)}
-                                disabled={rejectMutation.isPending || approveMutation.isPending}
+                                onClick={() => setRejectModal(p)}
                                 title="Rad etish"
-                                className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-colors disabled:opacity-50"
+                                className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-colors"
                               >
                                 <XCircle className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => approveMutation.mutate(p.id)}
-                                disabled={approveMutation.isPending || rejectMutation.isPending}
+                                disabled={approveMutation.isPending}
                                 title="Tasdiqlash"
                                 className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-200 transition-colors disabled:opacity-50"
                               >
@@ -977,6 +1095,63 @@ export default function Products() {
           onClose={closeModal}
           onEdit={() => setModal("edit")}
         />
+      )}
+
+      {/* Reject reason modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setRejectModal(null); setRejectReason(""); }} />
+          <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-border/60">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <XCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base">Mahsulotni rad etish</h3>
+                <p className="text-xs text-muted-foreground line-clamp-1">{rejectModal.name}</p>
+              </div>
+              <button onClick={() => { setRejectModal(null); setRejectReason(""); }} className="ml-auto w-8 h-8 rounded-xl bg-muted flex items-center justify-center hover:bg-muted/80">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Product preview */}
+            {rejectModal.images?.[0] && (
+              <div className="w-full h-32 rounded-xl overflow-hidden mb-4 bg-muted">
+                <img src={rejectModal.images[0]} alt={rejectModal.name} className="w-full h-full object-cover" />
+              </div>
+            )}
+
+            <label className="block text-sm font-semibold text-foreground mb-2">
+              Rad etish sababi <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Masalan: Rasm sifati yetarli emas, narx noto'g'ri ko'rsatilgan, tavsif to'liq emas..."
+              rows={4}
+              className="w-full px-4 py-3 bg-muted/50 border border-border/60 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+            />
+            <p className="text-xs text-muted-foreground mb-4">Bu xabar sotuvchiga ko'rsatiladi</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setRejectModal(null); setRejectReason(""); }}
+                className="flex-1 h-10 rounded-xl bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleRejectSubmit}
+                disabled={!rejectReason.trim() || rejectMutation.isPending}
+                className="flex-1 h-10 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                {rejectMutation.isPending ? "Rad etilmoqda..." : "Rad etish"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

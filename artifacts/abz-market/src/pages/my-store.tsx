@@ -17,6 +17,7 @@ interface Product {
   images: string[] | null; categoryId: string | null; categoryName: string | null;
   status: string; isFeatured: boolean; discount: number | null; description: string | null;
   rating: string; reviewCount: number; salesCount: number;
+  rejectionReason: string | null;
 }
 interface Category { id: string; name: string; icon: string | null; }
 
@@ -251,7 +252,7 @@ function AddProductModal({
             {saving ? (
               <><span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Yuklanmoqda...</>
             ) : (
-              <><Plus className="w-5 h-5" /> Tasdiqlashga yuborish</>
+              <><CheckCircle className="w-5 h-5" /> Adminga yuborish</>
             )}
           </button>
         </div>
@@ -468,10 +469,17 @@ export default function MyStore() {
                       </div>
                     )}
                     {st === "rejected" && (
-                      <p className="text-[10px] text-red-500 mt-1">Admin tomonidan rad etildi</p>
+                      <div className="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+                        <p className="text-[10px] font-bold text-red-600 mb-0.5">Rad etildi</p>
+                        {p.rejectionReason ? (
+                          <p className="text-[10px] text-red-500 leading-tight">{p.rejectionReason}</p>
+                        ) : (
+                          <p className="text-[10px] text-red-400">Admin tomonidan rad etildi</p>
+                        )}
+                      </div>
                     )}
                     {st === "pending" && (
-                      <p className="text-[10px] text-amber-600 mt-1">Admin tasdiqlashini kutmoqda</p>
+                      <p className="text-[10px] text-amber-600 mt-1">⏳ Admin tasdiqlashini kutmoqda</p>
                     )}
                   </div>
 

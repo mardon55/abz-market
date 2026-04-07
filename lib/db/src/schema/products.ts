@@ -50,6 +50,7 @@ export const productsTable = pgTable("products", {
   discount: integer("discount"),
   salesCount: integer("sales_count").default(0),
   status: text("status").notNull().default("approved"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

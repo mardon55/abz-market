@@ -28,6 +28,8 @@ const PRODUCT_SELECT = {
   discount: productsTable.discount,
   salesCount: productsTable.salesCount,
   status: productsTable.status,
+  rejectionReason: productsTable.rejectionReason,
+  createdAt: productsTable.createdAt,
 };
 
 router.get("/products", async (req, res) => {
@@ -145,8 +147,10 @@ router.patch("/products/:id", async (req, res) => {
 
     if (action === "approve") {
       updates.status = "approved";
+      updates.rejectionReason = null;
     } else if (action === "reject") {
       updates.status = "rejected";
+      if (req.body.rejectionReason) updates.rejectionReason = String(req.body.rejectionReason);
     } else {
       if (name !== undefined)         updates.name = String(name);
       if (price !== undefined)        updates.price = String(price);
