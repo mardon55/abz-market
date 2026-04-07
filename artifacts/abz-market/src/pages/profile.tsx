@@ -960,11 +960,10 @@ export default function Profile() {
 
           {/* Stats row */}
           <div className="px-4 mb-5">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { label: "Buyurtmalar", value: "12" },
                 { label: "Sevimli",     value: "8"  },
-                { label: "Ball",        value: "340" },
               ].map(({ label, value }) => (
                 <div key={label} className="glass-card rounded-2xl p-3 text-center shadow-ios-sm">
                   <div className="font-display font-extrabold text-xl text-primary">{value}</div>
