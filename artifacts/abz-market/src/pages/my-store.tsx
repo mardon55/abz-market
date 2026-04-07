@@ -645,6 +645,17 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
           </div>
         </div>
 
+        {/* Submit button — always visible at top */}
+        <div className="shrink-0 px-5 pt-3 pb-3 border-b border-border/60 bg-background">
+          <button type="button" onClick={handleSubmit} disabled={saving || compressing}
+            className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
+          >
+            {saving
+              ? <><span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Yuborilmoqda...</>
+              : <><Send className="w-5 h-5" />{isEdit ? "Qayta tekshirishga yuborish" : "Adminga yuborish"}</>}
+          </button>
+        </div>
+
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
@@ -811,16 +822,6 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
           </div>
         </div>
 
-        {/* Footer — always visible */}
-        <div className="shrink-0 px-5 pt-3 pb-6 border-t border-border/60 bg-background">
-          <button type="button" onClick={handleSubmit} disabled={saving || compressing}
-            className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
-          >
-            {saving
-              ? <><span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Yuborilmoqda...</>
-              : <><Send className="w-5 h-5" />{isEdit ? "Qayta tekshirishga yuborish" : "Adminga yuborish"}</>}
-          </button>
-        </div>
       </div>
     </div>
   );
