@@ -6,6 +6,7 @@ import {
   Trash2, X, ChevronDown, ImageIcon,
   AlertCircle, RefreshCw, Star, Send,
   Pencil, RotateCcw, Tag, Palette, Ruler,
+  ToggleLeft, ToggleRight,
 } from "lucide-react";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -55,8 +56,7 @@ async function compressImage(file: File): Promise<string> {
         }
         const canvas = document.createElement("canvas");
         canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, width, height);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.src = e.target?.result as string;
@@ -65,97 +65,338 @@ async function compressImage(file: File): Promise<string> {
   });
 }
 
-// ── Auto-detect category ──────────────────────────────────────
-const CATEGORY_KW: [string[], string][] = [
-  [["divan", "sofa", "kupe divan", "uglovoy", "диван"], "divan"],
-  [["kreslo", "armchair", "кресло"], "kreslo"],
-  [["stul", "chair", "taburet", "стул"], "stul"],
-  [["stol", "masa", "parta", "yozuv", "стол"], "stol"],
-  [["shkaf", "javon", "komod", "kommod", "шкаф"], "shkaf"],
-  [["karavot", "kravat", "yotoq", "кровать", "bed"], "karavot"],
-  [["polka", "shelf", "стеллаж", "stellaj"], "polka"],
-  [["deraza", "oyna", "window", "окно"], "deraza"],
-  [["eshik", "door", "дверь"], "eshik"],
-  [["vanna", "bathroom", "ванна"], "vanna"],
-  [["gilamcha", "gilam", "carpet", "kovyor"], "gilamcha"],
-  [["lampa", "chiroq", "svetilnik", "lamp"], "lampa"],
+// ── Category-specific spec fields ─────────────────────────────
+interface SpecField {
+  key: string; label: string;
+  type: "text" | "number" | "select" | "toggle";
+  unit?: string; options?: string[]; placeholder?: string;
+}
+interface CategorySpec { names: string[]; emoji: string; fields: SpecField[]; }
+
+const CATEGORY_SPECS: CategorySpec[] = [
+  {
+    names: ["Shkaflar"],
+    emoji: "🚪",
+    fields: [
+      { key: "material",   label: "Material",             type: "select", options: ["Eman","MDF","LDSP Laminat","Akril","Plastik","Kombinatsiya"] },
+      { key: "color",      label: "Asosiy rangi",         type: "text",   placeholder: "masalan: Oq, Wenge, Yong'oq" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 150" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
+      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 60" },
+      { key: "doors",      label: "Eshiklar soni",        type: "select", options: ["1","2","3","4","Kupe (slayder)","Akkordeon"] },
+      { key: "drawers",    label: "Tortmachalar soni",    type: "select", options: ["0","1","2","3","4","5+"] },
+      { key: "mirror",     label: "Ko'zgu mavjud",        type: "toggle" },
+      { key: "assembly",   label: "Yig'ilgan holda yetkazish", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Komodlar"],
+    emoji: "🗄️",
+    fields: [
+      { key: "material",   label: "Material",             type: "select", options: ["Eman","MDF","LDSP","Akril","Plastik"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 100" },
+      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 45" },
+      { key: "drawers",    label: "Tortmachalar soni",    type: "select", options: ["2","3","4","5","6","7+"] },
+      { key: "topGlass",   label: "Shisha ustlik",        type: "toggle" },
+      { key: "mirror",     label: "Ko'zgu bilan",         type: "toggle" },
+    ],
+  },
+  {
+    names: ["Oshxonalar"],
+    emoji: "🍳",
+    fields: [
+      { key: "material",     label: "Fasad materiali",     type: "select", options: ["MDF bo'yalgan","Akril","Plastik PVC","Eman furnir","Matt laminat","Ekran"] },
+      { key: "color",        label: "Asosiy rangi",        type: "text",   placeholder: "masalan: Oq, Kulrang, Yashil" },
+      { key: "shape",        label: "Rejasi (shakli)",     type: "select", options: ["To'g'ri (lineynyy)","L-shakl","U-shakl","P-shakl","Orolcha bilan"] },
+      { key: "totalLen",     label: "Umumiy uzunlik",      type: "number", unit: "sm",  placeholder: "masalan: 300" },
+      { key: "upperH",       label: "Yuqori shkaf balandligi", type: "number", unit: "sm", placeholder: "masalan: 72" },
+      { key: "countertop",   label: "Ish yuzasi (stoleshnitsa)", type: "select", options: ["LDSP","Granit","Sun'iy tosh","Eman massiv","Kompozit","Kvarts"] },
+      { key: "sink",         label: "Lavabo bilan",        type: "toggle" },
+      { key: "appliances",   label: "Texnika kiritilgan",  type: "toggle" },
+      { key: "hood",         label: "Degaz (vытяжка) bilan", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Yotoqona", "Yotoqxona"],
+    emoji: "🛏️",
+    fields: [
+      { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Karavot + shkaf","Karavot + shkaf + komod"] },
+      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","MDF","LDSP Laminat","Akril","Metaldan"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Marra" },
+      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
+      { key: "headboard",  label: "Bosh to'ri (izgolov'e)", type: "select", options: ["Yumshoq to'r","Qattiq to'r","Kamarli","Yog'ochdan","Maxsus dizayn"] },
+      { key: "storage",    label: "Qutilar bilan (yotoq ostida)", type: "toggle" },
+      { key: "mattress",   label: "Matras bilan birga",   type: "toggle" },
+      { key: "nightstand", label: "Tungi stol bilan",     type: "toggle" },
+    ],
+  },
+  {
+    names: ["Karavotlar"],
+    emoji: "🛌",
+    fields: [
+      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","Sosna","MDF","LDSP","Metal","To'r bilan metal"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang, Qora" },
+      { key: "size",       label: "O'lcham (uzun × keng)", type: "select", options: ["70×160 (bola)","80×190","90×200 (bir kishi)","120×200","140×200","160×200 (double)","180×200 (queen)","200×200 (king)"] },
+      { key: "height",     label: "Poldan to'shak yuzasigacha", type: "number", unit: "sm", placeholder: "masalan: 45" },
+      { key: "headboard",  label: "Bosh to'ri turi",      type: "select", options: ["Yumshoq qoplama","Qattiq yog'och","Metaldan","Kamarli","Boshi yo'q"] },
+      { key: "storage",    label: "Qutilar bilan (pastda)", type: "toggle" },
+      { key: "mattress",   label: "Matras bilan birga",   type: "toggle" },
+      { key: "slats",      label: "Reykalar (latylar) bilan", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Divonlar"],
+    emoji: "🛋️",
+    fields: [
+      { key: "upholstery", label: "Qoplamasi",            type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Mikrofiber","Bukle","Shenil"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Bej, To'q jigarrang" },
+      { key: "shape",      label: "Shakli",               type: "select", options: ["To'g'ri (klassik)","L-shakl (uglovoy)","U-shakl","Modul","Ottoman bilan"] },
+      { key: "length",     label: "Uzunligi (eni)",        type: "number", unit: "sm",  placeholder: "masalan: 220" },
+      { key: "depth",      label: "Chuqurligi (o'tirilganda)", type: "number", unit: "sm", placeholder: "masalan: 90" },
+      { key: "seats",      label: "O'tirish joylari",     type: "select", options: ["2","3","4","5","6+","Modul"] },
+      { key: "foldable",   label: "Yotiladigan (razkladnoy)", type: "toggle" },
+      { key: "storage",    label: "Qutilar bilan (ichida)", type: "toggle" },
+      { key: "pillows",    label: "Dekorativ yostiqlar bilan", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Kreslo"],
+    emoji: "🪑",
+    fields: [
+      { key: "upholstery", label: "Qoplamasi",            type: "select", options: ["Haqiqiy teri","Eko-teri","Mato","Velur","Bukle","Shenil"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Jigarrang, Bej, Yashil" },
+      { key: "type",       label: "Kreslo turi",          type: "select", options: ["Klassik","Bergere (katta)","Ofis","Aylanadigan","Teri massaj","Salona"] },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
+      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 85" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 95" },
+      { key: "foldable",   label: "Yotiladigan",          type: "toggle" },
+      { key: "armrests",   label: "Qo'ltiqchalar bilan",  type: "toggle" },
+      { key: "swivel",     label: "Aylanadigan (360°)",   type: "toggle" },
+    ],
+  },
+  {
+    names: ["Stollar"],
+    emoji: "🍽️",
+    fields: [
+      { key: "tableType",  label: "Stol turi",            type: "select", options: ["Ovqat stoli","Kofe stoli","Yozuv stoli","Jurnal stoli","Konsolka","Burchak stoli","Transformerli"] },
+      { key: "material",   label: "Tayanch + ustki material", type: "select", options: ["Eman massiv","MDF + metal","Shisha + metal","Mramor + metal","Granit","Keramika","LDSP"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Oq, Yog'och" },
+      { key: "length",     label: "Uzunligi",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 90" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 76" },
+      { key: "shape",      label: "Shakli",               type: "select", options: ["To'rtburchak","Kvadrat","Doira","Oval","Noodatiy"] },
+      { key: "extendable", label: "Kengaytiriladigan (razdvizhnoy)", type: "toggle" },
+      { key: "chairs",     label: "Stullar bilan birga",  type: "toggle" },
+      { key: "chairCount", label: "Stullar soni",         type: "select", options: ["2","4","6","8","10+"] },
+    ],
+  },
+  {
+    names: ["Stullar"],
+    emoji: "💺",
+    fields: [
+      { key: "chairType",  label: "Stul turi",            type: "select", options: ["Oshxona stuli","Ofis kreslo","Bar stuli","Mulyazh (dekorativ)","Bolalar stuli"] },
+      { key: "upholstery", label: "O'tirgich materiali",  type: "select", options: ["Teri","Eko-teri","Mato","Velur","Plastik","Yog'och"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Bej, Kulrang" },
+      { key: "frame",      label: "Karkas (oyoqlar)",     type: "select", options: ["Eman yog'och","Metall xrom","Metall qora","Plastik","Bulog'li metall"] },
+      { key: "height",     label: "O'tirgich balandligi", type: "number", unit: "sm",  placeholder: "masalan: 46" },
+      { key: "armrests",   label: "Qo'ltiqchalar bilan",  type: "toggle" },
+      { key: "adjustable", label: "Balandlik sozlanadi",  type: "toggle" },
+      { key: "wheels",     label: "G'ildiraklar bilan",   type: "toggle" },
+      { key: "foldable",   label: "Bukiladigan (skladnoy)", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Javonlar"],
+    emoji: "📚",
+    fields: [
+      { key: "shelfType",  label: "Javon turi",           type: "select", options: ["Kitob javoni","Dekorativ javon","Garderob tizimi","Oshxona javoni","Ofis javoni","Devorga mahkamlanadigan"] },
+      { key: "material",   label: "Material",             type: "select", options: ["Eman massiv","MDF","LDSP","Metal + yog'och","Metal + shisha","Metal"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Qora" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
+      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 30" },
+      { key: "shelves",    label: "Javonlar soni (bir qism)", type: "select", options: ["2","3","4","5","6","7","8","9+"] },
+      { key: "doors",      label: "Eshiklar bilan",       type: "toggle" },
+      { key: "wallMount",  label: "Devorga o'rnatiladi",  type: "toggle" },
+      { key: "glass",      label: "Shisha eshiklar",      type: "toggle" },
+    ],
+  },
+  {
+    names: ["Matraslar"],
+    emoji: "💤",
+    fields: [
+      { key: "matType",    label: "Matras turi",          type: "select", options: ["Yay (prujina) bilan","Prujinasiz (bespruzhinniy)","Ortopedik","Memory foam","Lateks","Kokonut qatlam","Gibrid"] },
+      { key: "size",       label: "O'lcham",              type: "select", options: ["60×120 (bola)","70×140","80×190","90×200","120×200","140×200","160×200","180×200","200×200"] },
+      { key: "thickness",  label: "Qalinligi",            type: "number", unit: "sm",  placeholder: "masalan: 20" },
+      { key: "firmness",   label: "Qattiqlik darajasi",   type: "select", options: ["Juda yumshoq","Yumshoq","O'rta-yumshoq","O'rta","O'rta-qattiq","Qattiq","Juda qattiq"] },
+      { key: "cover",      label: "Qoplama material",     type: "select", options: ["Jacquard","Mato (trikotaj)","Aloe vera","Bambuk","Eurotop (qo'shimcha yumshoq qatlam)"] },
+      { key: "warranty",   label: "Kafolat",              type: "select", options: ["1 yil","2 yil","3 yil","5 yil","7 yil","10 yil","15 yil","20 yil"] },
+      { key: "removeCover", label: "Qoplama yechish mumkin", type: "toggle" },
+      { key: "twoSides",   label: "Ikki tomonlama (turnover)", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Bola xonasi"],
+    emoji: "🧸",
+    fields: [
+      { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Burchak (uglovoy) karavot","Stol + stul","Shkaf","Ikki qavatli karavot"] },
+      { key: "ageGroup",   label: "Yosh guruh",           type: "select", options: ["0–3 yosh","3–7 yosh","7–12 yosh","12–17 yosh","Universal"] },
+      { key: "material",   label: "Material",             type: "select", options: ["MDF","Eman","LDSP","Plastik (xavfsiz)","Kombinatsiya"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Pushti, Ko'k" },
+      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["60×120","70×140","80×160","80×200","90×200"] },
+      { key: "safeCoat",   label: "Xavfsiz, ekologik lak", type: "toggle" },
+      { key: "storage",    label: "Yashirma tortmachalar bilan", type: "toggle" },
+      { key: "study",      label: "Yozuv stoli bilan",    type: "toggle" },
+      { key: "bunk",       label: "Ikki qavatli (supraloft)", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Ofis mebeli"],
+    emoji: "🖥️",
+    fields: [
+      { key: "officeType", label: "Mebelning turi",       type: "select", options: ["Ish stoli","Ofis kreslo","Kitob javoni","Yig'ma to'plam (garnitur)","Qabul stoli","Kutish xonasi divani"] },
+      { key: "material",   label: "Material",             type: "select", options: ["LDSP","MDF","Eman","Metal + shisha","Kombinatsiya"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Qora, Yong'oq" },
+      { key: "deskW",      label: "Stol eni",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
+      { key: "deskD",      label: "Stol chuqurligi",      type: "number", unit: "sm",  placeholder: "masalan: 70" },
+      { key: "deskH",      label: "Stol balandligi",      type: "number", unit: "sm",  placeholder: "masalan: 76" },
+      { key: "pedestal",   label: "Tirgakli quti (pedestal) bilan", type: "toggle" },
+      { key: "cable",      label: "Simlar boshqaruv tizimi", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Gilamlar"],
+    emoji: "🏡",
+    fields: [
+      { key: "rugType",    label: "Gilam turi",           type: "select", options: ["Mashinada to'qilgan","Qo'lda to'qilgan","Tafted","Kilim (yassi)","Shenil","Shaggy (uzun tuk)","Bambuk"] },
+      { key: "material",   label: "Tolasi",               type: "select", options: ["Poliester","Akril","Polipropilen","Jun (wool)","Ipak","Bambuk","Viskoza","Gibrid"] },
+      { key: "size",       label: "O'lcham",              type: "select", options: ["60×110","80×150","100×150","100×200","120×170","120×180","150×200","160×230","200×300","Maxsus o'lcham"] },
+      { key: "pile",       label: "Tuk balandligi",       type: "select", options: ["Tuksiz (kilim)","Past (6–8 mm)","O'rta (10–15 mm)","Baland (20–30 mm)","Juda baland (shaggy 40mm+)"] },
+      { key: "color",      label: "Asosiy rang / naqsh",  type: "text",   placeholder: "masalan: Bej geometrik, Kulrang abstraktsiya" },
+      { key: "antislip",   label: "Pastki qismi slipmay", type: "toggle" },
+      { key: "washable",   label: "Mashinada yuviladi",   type: "toggle" },
+    ],
+  },
+  {
+    names: ["Chiroqlar"],
+    emoji: "💡",
+    fields: [
+      { key: "lightType",  label: "Chiroq turi",          type: "select", options: ["Lyustra (shiftga)","Bra (devorga)","Torshyer (polda)","Stol chiroqi","Spot (nuqtaviy)","LED panel","Track light","Arxitektura LED"] },
+      { key: "style",      label: "Dizayn uslubi",        type: "select", options: ["Zamonaviy (modern)","Skandinavcha","Klassik","Loft / Industrial","Minimalizm","Art Deco","Provans"] },
+      { key: "material",   label: "Korpus materiali",     type: "select", options: ["Metall xrom","Metall qora","Bronza / Oltin","Mis","Shisha + metall","Akrilik","Qog'oz / Mato"] },
+      { key: "colorTemp",  label: "Rang harorati",        type: "select", options: ["2700K – Issiq oq (xona)","3000K – Iliq oq","4000K – Tabiiy oq","5000–6500K – Sovuq oq (ofis)"] },
+      { key: "power",      label: "Quvvati",              type: "number", unit: "W",   placeholder: "masalan: 40" },
+      { key: "diameter",   label: "Diametr / Eni",        type: "number", unit: "sm",  placeholder: "masalan: 60" },
+      { key: "bulbBase",   label: "Patron (razem)",       type: "select", options: ["E27","E14","E40","GU10","GU5.3","G9","LED o'rnatilgan","G13 (lyuminessent)"] },
+      { key: "dimmable",   label: "Yorqinlik boshqariladi (dimmer)", type: "toggle" },
+      { key: "remote",     label: "Pult bilan",           type: "toggle" },
+      { key: "bulbIncl",   label: "Lampa kiritilgan",     type: "toggle" },
+    ],
+  },
+];
+
+// ── Find spec for a given category name ────────────────────────
+function getSpecForCategory(catName: string | null): CategorySpec | null {
+  if (!catName) return null;
+  return CATEGORY_SPECS.find((s) =>
+    s.names.some((n) => n.toLowerCase() === catName.toLowerCase())
+  ) ?? null;
+}
+
+// ── Auto-detect category from product name ─────────────────────
+const KW_MAP: [string[], string[]][] = [
+  [["shkaf","wardrobe","garderob","kupe"],                      ["Shkaflar"]],
+  [["komod","komod","dresser","chest","kommodik"],               ["Komodlar"]],
+  [["oshxona","mutfak","kitchen","garnitur oshxo"],             ["Oshxonalar"]],
+  [["divan","sofa","диван","uglovoy divan"],                    ["Divonlar"]],
+  [["kreslo","armchair","fotel","кресло"],                      ["Kreslo"]],
+  [["stol","masa","table","jurnal stoli","coffee table"],       ["Stollar"]],
+  [["stul","chair","taburet","bar stul"],                       ["Stullar"]],
+  [["javon","shelf","polka","kitob","bookcase","stellaj"],       ["Javonlar"]],
+  [["karavot","kravat","bed","кровать"],                        ["Karavotlar"]],
+  [["matras","mattress"],                                       ["Matraslar"]],
+  [["bola","kids","детская","bolalar"],                         ["Bola xonasi"]],
+  [["ofis","office"],                                          ["Ofis mebeli"]],
+  [["gilam","carpet","kovyor","kilim"],                         ["Gilamlar"]],
+  [["chiroq","lampa","lamp","lyustra","bra","torshyer","led"],  ["Chiroqlar"]],
+  [["yotoq","yotoqxona","bedroom","garnitur yotoq"],            ["Yotoqona","Yotoqxona"]],
 ];
 
 function detectCategory(name: string, cats: Category[]): string {
   if (!name.trim() || !cats.length) return "";
   const lower = name.toLowerCase();
-  // 1. Direct substring match against category names
   for (const c of cats) {
     if (lower.includes(c.name.toLowerCase())) return c.id;
   }
-  // 2. Keyword mapping
-  for (const [words, pattern] of CATEGORY_KW) {
+  for (const [words, targetNames] of KW_MAP) {
     if (words.some((w) => lower.includes(w))) {
-      const found = cats.find((c) => c.name.toLowerCase().includes(pattern));
-      if (found) return found.id;
+      for (const tName of targetNames) {
+        const found = cats.find((c) => c.name.toLowerCase() === tName.toLowerCase());
+        if (found) return found.id;
+      }
     }
   }
   return "";
 }
 
-// ── Price % calculation ───────────────────────────────────────
-function calcPctDiff(newPriceStr: string, oldPriceStr: string): number | null {
-  const n = parseFloat(newPriceStr.replace(/[\s,]/g, ""));
-  const o = parseFloat(oldPriceStr.replace(/[\s,]/g, ""));
+// ── Price % ────────────────────────────────────────────────────
+function calcPctDiff(newP: string, oldP: string): number | null {
+  const n = parseFloat(newP.replace(/[\s,]/g, ""));
+  const o = parseFloat(oldP.replace(/[\s,]/g, ""));
   if (!n || !o || o === 0) return null;
   return Math.round(((n - o) / o) * 100);
 }
 
-// ── Preset options ────────────────────────────────────────────
-const PRESET_COLORS = ["Oq", "Qora", "Kulrang", "Ko'k", "Yashil", "Qizil", "Sariq", "Jigarrang", "Bej", "Binafsha", "To'q sariq", "Pushti"];
-const PRESET_SIZES  = ["S", "M", "L", "XL", "XXL", "XXXL"];
+// ── Serialize specs to dimensions string ───────────────────────
+function serializeSpecs(specs: Record<string, string>, specDef: CategorySpec): string {
+  const parts: string[] = [];
+  for (const field of specDef.fields) {
+    const val = specs[field.key];
+    if (!val || val === "Yo'q") continue;
+    const valStr = field.unit ? `${val} ${field.unit}` : val;
+    parts.push(`${field.label}: ${valStr}`);
+  }
+  return parts.join(" | ");
+}
 
+// ── Preset chip options ────────────────────────────────────────
+const PRESET_COLORS = ["Oq","Qora","Kulrang","Ko'k","Yashil","Qizil","Sariq","Jigarrang","Bej","Binafsha","To'q sariq","Pushti"];
+const PRESET_SIZES  = ["S","M","L","XL","XXL","XXXL"];
 const MAX_IMAGES = 6;
 
 // ── ChipInput ─────────────────────────────────────────────────
-function ChipInput({
-  label, icon: Icon, items, onAdd, onRemove, placeholder, presets,
-}: {
+function ChipInput({ label, icon: Icon, items, onAdd, onRemove, placeholder, presets }: {
   label: string; icon: React.ElementType; items: string[];
   onAdd: (v: string) => void; onRemove: (i: number) => void;
   placeholder: string; presets?: string[];
 }) {
   const [val, setVal] = useState("");
-  const add = () => {
-    const t = val.trim();
-    if (t && !items.includes(t)) onAdd(t);
-    setVal("");
-  };
+  const add = () => { const t = val.trim(); if (t && !items.includes(t)) onAdd(t); setVal(""); };
   return (
     <div>
       <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-2">
         <Icon className="w-3.5 h-3.5" /> {label}
       </label>
-      {/* Preset chips */}
-      {presets && presets.length > 0 && (
+      {presets && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {presets.map((p) => {
             const active = items.includes(p);
             return (
-              <button
-                key={p} type="button"
+              <button key={p} type="button"
                 onClick={() => active ? onRemove(items.indexOf(p)) : onAdd(p)}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
-                  active
-                    ? "bg-primary text-white border-primary"
-                    : "bg-muted/60 text-muted-foreground border-border/60 hover:border-primary/40"
-                )}
-              >{p}</button>
+                className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
+                  active ? "bg-primary text-white border-primary" : "bg-muted/60 text-muted-foreground border-border/60"
+                )}>{p}</button>
             );
           })}
         </div>
       )}
-      {/* Selected chips */}
       {items.filter((i) => !presets?.includes(i)).length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
-          {items.filter((i) => !presets?.includes(i)).map((chip, idx) => (
-            <span key={idx} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-semibold">
+          {items.filter((i) => !presets?.includes(i)).map((chip, _idx) => (
+            <span key={chip} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-semibold">
               {chip}
               <button type="button" onClick={() => onRemove(items.indexOf(chip))} className="hover:text-red-500">
                 <X className="w-3 h-3" />
@@ -164,17 +405,13 @@ function ChipInput({
           ))}
         </div>
       )}
-      {/* Free input */}
       <div className="flex gap-2">
-        <input
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
+        <input value={val} onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
           placeholder={placeholder}
           className="flex-1 h-9 px-3 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
-        <button
-          type="button" onClick={add} disabled={!val.trim()}
+        <button type="button" onClick={add} disabled={!val.trim()}
           className="h-9 px-3 bg-primary/10 text-primary rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-primary/20 transition-colors"
         >+ Qo'sh</button>
       </div>
@@ -182,15 +419,102 @@ function ChipInput({
   );
 }
 
-// ── Product Modal (add & edit) ────────────────────────────────
-function ProductModal({
-  storeId, categories, onClose, onSaved, editProduct,
-}: {
+// ── Dynamic spec section ───────────────────────────────────────
+function SpecSection({ specDef, specs, onChange }: {
+  specDef: CategorySpec;
+  specs: Record<string, string>;
+  onChange: (key: string, val: string) => void;
+}) {
+  return (
+    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-base">{specDef.emoji}</span>
+        <span className="text-xs font-bold text-primary">
+          {specDef.names[0]} xususiyatlari
+        </span>
+        <span className="text-[10px] bg-primary text-white px-1.5 py-0.5 rounded-md ml-auto">
+          Majburiy
+        </span>
+      </div>
+      {specDef.fields.map((f) => (
+        <div key={f.key}>
+          <label className="block text-xs font-semibold text-muted-foreground mb-1">
+            {f.label}{f.unit ? ` (${f.unit})` : ""}
+          </label>
+          {f.type === "select" ? (
+            <div className="relative">
+              <select
+                value={specs[f.key] ?? ""}
+                onChange={(e) => onChange(f.key, e.target.value)}
+                className="w-full h-10 px-3 pr-8 bg-background border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">— Tanlang —</option>
+                {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            </div>
+          ) : f.type === "toggle" ? (
+            <button
+              type="button"
+              onClick={() => onChange(f.key, specs[f.key] === "Bor" ? "Yo'q" : "Bor")}
+              className={cn(
+                "flex items-center gap-2 h-10 px-3 rounded-xl border text-sm font-semibold transition-all w-full",
+                specs[f.key] === "Bor"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                  : "bg-muted/40 text-muted-foreground border-border/60"
+              )}
+            >
+              {specs[f.key] === "Bor"
+                ? <ToggleRight className="w-4 h-4 text-emerald-600" />
+                : <ToggleLeft className="w-4 h-4" />}
+              {specs[f.key] === "Bor" ? "✓ Bor" : "Yo'q"}
+            </button>
+          ) : (
+            <div className="relative">
+              <input
+                type={f.type === "number" ? "number" : "text"}
+                value={specs[f.key] ?? ""}
+                onChange={(e) => onChange(f.key, e.target.value)}
+                placeholder={f.placeholder ?? ""}
+                className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {f.unit && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">
+                  {f.unit}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Product Modal ─────────────────────────────────────────────
+function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   storeId: string; categories: Category[];
   onClose: () => void; onSaved: () => void;
   editProduct?: Product;
 }) {
   const isEdit = !!editProduct;
+
+  // Parse specs from dimensions string on edit
+  const parseEditSpecs = (): Record<string, string> => {
+    if (!editProduct?.dimensions) return {};
+    const specs: Record<string, string> = {};
+    editProduct.dimensions.split("|").forEach((part) => {
+      const [k, ...rest] = part.split(":").map((s) => s.trim());
+      if (k && rest.length) {
+        // Reverse-lookup field key by label
+        for (const cs of CATEGORY_SPECS) {
+          const f = cs.fields.find((fd) => fd.label === k);
+          if (f) { specs[f.key] = rest.join(":").trim().replace(/ (sm|W|kg)$/, ""); break; }
+        }
+      }
+    });
+    return specs;
+  };
 
   const [name, setName]         = useState(editProduct?.name ?? "");
   const [price, setPrice]       = useState(editProduct?.price ?? "");
@@ -200,13 +524,14 @@ function ProductModal({
   const [catId, setCatId]       = useState(editProduct?.categoryId ?? "");
   const [colors, setColors]     = useState<string[]>(editProduct?.colors ?? []);
   const [sizes, setSizes]       = useState<string[]>(editProduct?.sizes ?? []);
+  const [specs, setSpecs]       = useState<Record<string, string>>(parseEditSpecs);
   const [saving, setSaving]     = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [error, setError]       = useState("");
   const [autoDetected, setAutoDetected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-detect category when name changes (only if user hasn't manually set it)
+  // Auto-detect category
   useEffect(() => {
     if (!name.trim() || catId) return;
     const detected = detectCategory(name, categories);
@@ -214,25 +539,25 @@ function ProductModal({
     else setAutoDetected(false);
   }, [name]);
 
-  // Clear auto-detected flag when user manually changes category
-  const handleCatChange = (v: string) => { setCatId(v); setAutoDetected(false); };
-
+  const handleCatChange = (v: string) => { setCatId(v); setAutoDetected(false); setSpecs({}); };
+  const updateSpec = (key: string, val: string) => setSpecs((p) => ({ ...p, [key]: val }));
   const pct = calcPctDiff(price, oldPrice);
+
+  // Get current category name and spec def
+  const currentCat = categories.find((c) => c.id === catId);
+  const specDef = getSpecForCategory(currentCat?.name ?? null);
 
   const handleImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const remaining = MAX_IMAGES - images.length;
-    const toProcess = files.slice(0, remaining);
+    const toProcess = files.slice(0, MAX_IMAGES - images.length);
     setCompressing(true); setError("");
     try {
-      const compressed = await Promise.all(
-        toProcess.map(async (f) => {
-          if (f.size > 15 * 1024 * 1024) throw new Error(`"${f.name}" 15MB dan katta`);
-          return compressImage(f);
-        })
-      );
-      setImages((prev) => [...prev, ...compressed].slice(0, MAX_IMAGES));
+      const compressed = await Promise.all(toProcess.map(async (f) => {
+        if (f.size > 15 * 1024 * 1024) throw new Error(`"${f.name}" 15MB dan katta`);
+        return compressImage(f);
+      }));
+      setImages((p) => [...p, ...compressed].slice(0, MAX_IMAGES));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Rasm yuklanmadi");
     } finally {
@@ -241,75 +566,57 @@ function ProductModal({
     }
   };
 
-  const removeImage = (idx: number) => setImages((p) => p.filter((_, i) => i !== idx));
-
   const handleSubmit = async () => {
     if (!name.trim()) { setError("Mahsulot nomini kiriting"); return; }
     if (!price.trim()) { setError("Narxni kiriting"); return; }
     const priceNum = parseFloat(price.replace(/[\s,]/g, ""));
     if (isNaN(priceNum) || priceNum <= 0) { setError("Narx noto'g'ri"); return; }
     const oldPriceNum = oldPrice ? parseFloat(oldPrice.replace(/[\s,]/g, "")) : null;
+    const dimensionsStr = specDef ? serializeSpecs(specs, specDef) : null;
 
     setSaving(true); setError("");
     try {
+      const body: Record<string, unknown> = {
+        name: name.trim(), price: String(priceNum),
+        oldPrice: oldPriceNum ? String(oldPriceNum) : null,
+        description: desc.trim() || null, images,
+        categoryId: catId || null, storeId,
+        colors: colors.length ? colors : null,
+        sizes: sizes.length ? sizes : null,
+        dimensions: dimensionsStr || null,
+      };
+
       let res: Response;
       if (isEdit && editProduct) {
         res = await fetch(`/api/products/${editProduct.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "resubmit",
-            name: name.trim(),
-            price: String(priceNum),
-            oldPrice: oldPriceNum ? String(oldPriceNum) : null,
-            description: desc.trim() || null,
-            images,
-            categoryId: catId || null,
-            colors: colors.length ? colors : null,
-            sizes: sizes.length ? sizes : null,
-          }),
+          body: JSON.stringify({ ...body, action: "resubmit" }),
         });
       } else {
         res = await fetch("/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: name.trim(),
-            price: String(priceNum),
-            oldPrice: oldPriceNum ? String(oldPriceNum) : null,
-            description: desc.trim() || null,
-            images,
-            categoryId: catId || null,
-            storeId,
-            colors: colors.length ? colors : null,
-            sizes: sizes.length ? sizes : null,
-            status: "pending",
-          }),
+          body: JSON.stringify({ ...body, status: "pending" }),
         });
       }
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string })?.error ?? "Xato yuz berdi");
+        const b = await res.json().catch(() => ({}));
+        throw new Error((b as { error?: string }).error ?? "Xato yuz berdi");
       }
       hapticFeedback("success");
       onSaved();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Xato yuz berdi, qayta urinib ko'ring");
-    } finally {
-      setSaving(false);
-    }
+      setError(err instanceof Error ? err.message : "Xato yuz berdi");
+    } finally { setSaving(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative mt-auto bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}>
 
-      {/* Modal panel — flex column with max-height using svh to handle keyboard */}
-      <div
-        className="relative mt-auto bg-background rounded-t-3xl shadow-2xl flex flex-col"
-        style={{ maxHeight: "92svh" }}
-      >
-        {/* ── Non-scrollable header ── */}
+        {/* Header */}
         <div className="shrink-0">
           <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
@@ -323,79 +630,27 @@ function ProductModal({
           </div>
         </div>
 
-        {/* ── Scrollable form fields ── */}
+        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /><span>{error}</span>
             </div>
           )}
-
-          {/* Edit mode notice */}
           {isEdit && (
             <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2.5 rounded-xl text-sm">
               <RotateCcw className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>Ma'lumotlarni to'g'rilang, keyin adminga qayta yuboring</span>
+              <span>Ma'lumotlarni to'g'rilang — keyin adminga qayta yuboring</span>
             </div>
           )}
 
           {/* Name */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Mahsulot nomi *
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="masalan: 3 eshikli shkaf"
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Mahsulot nomi *</label>
+            <input value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="masalan: 3 eshikli kupe shkaf"
               className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
-          </div>
-
-          {/* Price */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Narxlar
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-[10px] text-muted-foreground mb-1">Yangi narx (so'm) *</div>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="1200000"
-                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <div className="text-[10px] text-muted-foreground mb-1">Eski narx (so'm)</div>
-                <input
-                  type="number"
-                  value={oldPrice}
-                  onChange={(e) => setOldPrice(e.target.value)}
-                  placeholder="1500000"
-                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-
-            {/* % badge */}
-            {pct !== null && (
-              <div className={cn(
-                "mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold border",
-                pct < 0
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-orange-50 text-orange-700 border-orange-200"
-              )}>
-                <Tag className="w-3.5 h-3.5" />
-                {pct < 0
-                  ? `${Math.abs(pct)}% ga arzonlashgan`
-                  : `${pct}% ga qimmatlashgan`}
-                <span className="text-lg font-black ml-0.5">{pct < 0 ? "−" : "+"}{Math.abs(pct)}%</span>
-              </div>
-            )}
           </div>
 
           {/* Category */}
@@ -409,141 +664,146 @@ function ProductModal({
               )}
             </div>
             <div className="relative">
-              <select
-                value={catId}
-                onChange={(e) => handleCatChange(e.target.value)}
+              <select value={catId} onChange={(e) => handleCatChange(e.target.value)}
                 className="w-full h-11 px-4 pr-9 bg-muted/50 border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value="">Kategoriyasiz</option>
+                <option value="">— Kategoriya tanlang —</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.icon ? c.icon + " " : ""}{c.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
+            {specDef && (
+              <p className="text-[11px] text-primary mt-1.5 font-semibold">
+                {specDef.emoji} {specDef.names[0]} uchun qo'shimcha ma'lumotlar quyida so'raladi ↓
+              </p>
+            )}
           </div>
 
-          {/* Multi-image picker */}
+          {/* Category-specific spec fields */}
+          {specDef && (
+            <SpecSection specDef={specDef} specs={specs} onChange={updateSpec} />
+          )}
+
+          {/* Prices */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Narxlar</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1">Joriy narx (so'm) *</div>
+                <input type="number" value={price} onChange={(e) => setPrice(e.target.value)}
+                  placeholder="1200000"
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1">Eski narx (chegirmadan avval)</div>
+                <input type="number" value={oldPrice} onChange={(e) => setOldPrice(e.target.value)}
+                  placeholder="1500000"
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+            {pct !== null && (
+              <div className={cn("mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold border",
+                pct < 0
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-orange-50 text-orange-700 border-orange-200"
+              )}>
+                <Tag className="w-3.5 h-3.5" />
+                {pct < 0
+                  ? <><span className="text-lg font-black">−{Math.abs(pct)}%</span> ga arzonlashgan</>
+                  : <><span className="text-lg font-black">+{pct}%</span> ga qimmatlashgan</>}
+              </div>
+            )}
+          </div>
+
+          {/* Images */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-muted-foreground">
                 Rasmlar ({images.length}/{MAX_IMAGES})
               </span>
-              {images.length > 0 && (
-                <span className="text-[10px] text-muted-foreground">Birinchi rasm — asosiy</span>
-              )}
+              {images.length > 0 && <span className="text-[10px] text-muted-foreground">Birinchi — asosiy rasm</span>}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {images.map((src, idx) => (
-                <div key={idx}
-                  className="relative aspect-square rounded-2xl overflow-hidden bg-muted border-2 border-primary/30">
-                  <img src={src} alt={`Rasm ${idx + 1}`} className="w-full h-full object-cover" />
+                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted border-2 border-primary/30">
+                  <img src={src} alt="" className="w-full h-full object-cover" />
                   {idx === 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-white text-[9px] font-bold text-center py-0.5">
-                      Asosiy
-                    </div>
+                    <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-white text-[9px] font-bold text-center py-0.5">Asosiy</div>
                   )}
-                  <button type="button" onClick={() => removeImage(idx)}
+                  <button type="button" onClick={() => setImages((p) => p.filter((_, i) => i !== idx))}
                     className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center">
                     <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
               ))}
               {images.length < MAX_IMAGES && (
-                <label htmlFor="multi-img-input"
-                  className={cn(
-                    "aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all",
-                    compressing
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border active:bg-muted/60"
-                  )}>
-                  {compressing ? (
-                    <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
-                        <ImageIcon className="w-5 h-5 text-primary" />
-                      </div>
-                      <span className="text-[10px] font-semibold text-primary text-center px-1">
-                        {images.length === 0 ? "📷 Rasm qo'shish" : "+ Qo'shish"}
-                      </span>
-                    </>
-                  )}
-                  <input
-                    id="multi-img-input" ref={fileInputRef}
-                    type="file" accept="image/*" multiple
-                    className="hidden" onChange={handleImageFiles}
-                  />
+                <label htmlFor="mi-inp" className={cn(
+                  "aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all",
+                  compressing ? "border-primary/40 bg-primary/5" : "border-border active:bg-muted/60"
+                )}>
+                  {compressing
+                    ? <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    : (
+                      <>
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
+                          <ImageIcon className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-[10px] font-semibold text-primary text-center px-1">
+                          {images.length === 0 ? "📷 Rasm qo'shish" : "+ Qo'shish"}
+                        </span>
+                      </>
+                    )}
+                  <input id="mi-inp" ref={fileInputRef} type="file" accept="image/*" multiple
+                    className="hidden" onChange={handleImageFiles} />
                 </label>
               )}
             </div>
             {images.length === 0 && (
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                Min 1 ta • Maks 6 ta rasm (avtomatik siqiladi)
-              </p>
+              <p className="text-[11px] text-muted-foreground mt-2 text-center">1–6 ta rasm (avtomatik siqiladi, maks 15MB)</p>
             )}
           </div>
 
           {/* Colors */}
-          <ChipInput
-            label="Ranglar" icon={Palette}
-            items={colors}
+          <ChipInput label="Mavjud ranglar" icon={Palette} items={colors}
             onAdd={(v) => setColors((p) => [...p, v])}
-            onRemove={(i) => setColors((p) => p.filter((_, idx) => idx !== i))}
-            placeholder="Rang kiriting (masalan: Ko'k)"
-            presets={PRESET_COLORS}
+            onRemove={(i) => setColors((p) => p.filter((_, j) => j !== i))}
+            placeholder="Rang kiriting..." presets={PRESET_COLORS}
           />
 
           {/* Sizes */}
-          <ChipInput
-            label="O'lchamlar (razmerlar)" icon={Ruler}
-            items={sizes}
+          <ChipInput label="Mavjud o'lchamlar (razmerlar)" icon={Ruler} items={sizes}
             onAdd={(v) => setSizes((p) => [...p, v])}
-            onRemove={(i) => setSizes((p) => p.filter((_, idx) => idx !== i))}
-            placeholder="O'lcham (masalan: 120x60x80 sm)"
-            presets={PRESET_SIZES}
+            onRemove={(i) => setSizes((p) => p.filter((_, j) => j !== i))}
+            placeholder="O'lcham kiriting (masalan: 160×80×75 sm)" presets={PRESET_SIZES}
           />
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Tavsif (ixtiyoriy)
-            </label>
-            <textarea
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              rows={3}
-              placeholder="Mahsulot haqida qisqacha tavsif: material, xususiyat..."
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Qo'shimcha tavsif (ixtiyoriy)</label>
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
+              placeholder="Mahsulot haqida qo'shimcha ma'lumot: yig'ish, kafolat, maxsus xususiyatlar..."
               className="w-full px-4 py-3 bg-muted/50 border border-border/60 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
-          {/* Notice */}
           <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-sm text-amber-800">
             <Clock className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
-            <span>Admin tasdiqlashidan so'ng mijozlarga ko'rinadi</span>
+            <span>Admin tasdiqlashidan so'ng 24 soat ichida mijozlarga ko'rinadi</span>
           </div>
         </div>
 
-        {/* ── Always-visible footer with submit button ── */}
+        {/* Footer — always visible */}
         <div className="shrink-0 px-5 pt-3 pb-6 border-t border-border/60 bg-background">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving || compressing}
+          <button type="button" onClick={handleSubmit} disabled={saving || compressing}
             className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform"
           >
-            {saving ? (
-              <>
-                <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Yuborilmoqda...
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                {isEdit ? "Qayta tekshirishga yuborish" : "Adminga yuborish"}
-              </>
-            )}
+            {saving
+              ? <><span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Yuborilmoqda...</>
+              : <><Send className="w-5 h-5" />{isEdit ? "Qayta tekshirishga yuborish" : "Adminga yuborish"}</>}
           </button>
         </div>
       </div>
@@ -556,32 +816,26 @@ export default function MyStore() {
   const [, navigate] = useLocation();
   const seller = loadSeller();
 
-  const [store, setStore]           = useState<StoreData | null>(null);
-  const [products, setProducts]     = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [showAdd, setShowAdd]       = useState(false);
+  const [store, setStore]             = useState<StoreData | null>(null);
+  const [products, setProducts]       = useState<Product[]>([]);
+  const [categories, setCategories]   = useState<Category[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showAdd, setShowAdd]         = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [statusFilter, setFilter]   = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [statusFilter, setFilter]     = useState<"all"|"pending"|"approved"|"rejected">("all");
 
   const loadData = async () => {
     if (!seller) return;
     setLoading(true);
     try {
-      const [storeRes, productsRes, catRes] = await Promise.all([
+      const [storeRes, prodsRes, catRes] = await Promise.all([
         fetch(`/api/stores/${seller.storeId}`),
         fetch(`/api/products?storeId=${seller.storeId}&status=all`),
         fetch("/api/categories"),
       ]);
       if (storeRes.ok) setStore(await storeRes.json());
-      if (productsRes.ok) {
-        const d = await productsRes.json();
-        setProducts(d.products ?? []);
-      }
-      if (catRes.ok) {
-        const d = await catRes.json();
-        setCategories(d.categories ?? d ?? []);
-      }
+      if (prodsRes.ok) { const d = await prodsRes.json(); setProducts(d.products ?? []); }
+      if (catRes.ok)   { const d = await catRes.json(); setCategories(d.categories ?? d ?? []); }
     } finally { setLoading(false); }
   };
 
@@ -590,29 +844,22 @@ export default function MyStore() {
     loadData();
   }, []);
 
-  // Quick resubmit without editing
   const handleQuickResubmit = async (p: Product) => {
     if (!confirm(`"${p.name}" ni qayta tekshirishga yuborishni tasdiqlaysizmi?`)) return;
     hapticFeedback("impact");
     try {
       const res = await fetch(`/api/products/${p.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "resubmit" }),
       });
-      if (!res.ok) throw new Error("Xato");
-      hapticFeedback("success");
-      loadData();
-    } catch {
-      alert("Xato yuz berdi, qayta urinib ko'ring");
-    }
+      if (!res.ok) throw new Error();
+      hapticFeedback("success"); loadData();
+    } catch { alert("Xato yuz berdi"); }
   };
 
   if (!seller) return null;
 
-  const filtered = products.filter((p) =>
-    statusFilter === "all" ? true : p.status === statusFilter
-  );
+  const filtered = products.filter((p) => statusFilter === "all" ? true : p.status === statusFilter);
   const counts = {
     all:      products.length,
     pending:  products.filter((p) => p.status === "pending").length,
@@ -624,74 +871,63 @@ export default function MyStore() {
     <MobileLayout hideNav={false} title="Do'konim">
       <div className="px-4 pt-4 pb-24">
 
-        {/* Store header */}
+        {/* Store banner */}
         <div className="bg-gradient-to-br from-primary via-violet-600 to-purple-700 rounded-3xl p-4 mb-5 relative overflow-hidden shadow-ios-lg shadow-primary/30">
           <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-md" />
-          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
           <div className="relative flex items-center gap-4">
             <div className="w-14 h-14 rounded-[18px] bg-white/20 backdrop-blur-sm flex items-center justify-center font-display font-extrabold text-2xl text-white border border-white/30">
               {seller.storeName[0]}
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-display font-bold text-white text-lg leading-tight truncate">{seller.storeName}</h2>
-              {store && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full" />
-                  <span className="text-white/80 text-xs font-semibold">Tasdiqlangan do'kon</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+                <span className="text-white/80 text-xs font-semibold">Faol do'kon</span>
+              </div>
               {store?.location && <p className="text-white/60 text-xs mt-0.5 truncate">{store.location}</p>}
             </div>
           </div>
-          {store && (
-            <div className="relative grid grid-cols-3 gap-2 mt-4">
-              {[
-                { label: "Mahsulot",     value: counts.all },
-                { label: "Tasdiqlangan", value: counts.approved },
-                { label: "Kutilmoqda",   value: counts.pending },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white/15 rounded-2xl p-2.5 text-center backdrop-blur-sm">
-                  <div className="font-display font-bold text-white text-lg">{value}</div>
-                  <div className="text-white/70 text-[10px] font-medium">{label}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="relative grid grid-cols-3 gap-2 mt-4">
+            {[
+              { label: "Jami",         value: counts.all },
+              { label: "Tasdiqlangan", value: counts.approved },
+              { label: "Kutilmoqda",   value: counts.pending },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/15 rounded-2xl p-2.5 text-center backdrop-blur-sm">
+                <div className="font-display font-bold text-white text-lg">{value}</div>
+                <div className="text-white/70 text-[10px] font-medium">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Add button */}
-        <button
-          onClick={() => { hapticFeedback("impact"); setShowAdd(true); }}
-          className="w-full h-12 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold rounded-2xl flex items-center justify-center gap-2 shadow-ios-md shadow-primary/30 mb-5 press"
-        >
+        <button onClick={() => { hapticFeedback("impact"); setShowAdd(true); }}
+          className="w-full h-12 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold rounded-2xl flex items-center justify-center gap-2 shadow-ios-md shadow-primary/30 mb-5 press">
           <Plus className="w-5 h-5" /> Mahsulot qo'shish
         </button>
 
-        {/* Status tabs */}
+        {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-0.5 mb-4 scrollbar-none">
-          {(["all", "pending", "approved", "rejected"] as const).map((s) => {
+          {(["all","pending","approved","rejected"] as const).map((s) => {
             const label = s === "all" ? "Barchasi" : STATUS_MAP[s].label;
             return (
-              <button
-                key={s} onClick={() => setFilter(s)}
-                className={cn(
-                  "flex-shrink-0 px-3.5 h-8 rounded-xl text-xs font-bold border transition-all",
+              <button key={s} onClick={() => setFilter(s)}
+                className={cn("flex-shrink-0 px-3.5 h-8 rounded-xl text-xs font-bold border transition-all",
                   statusFilter === s
                     ? "bg-primary text-white border-primary"
                     : "bg-card border-border/60 text-muted-foreground"
-                )}
-              >
+                )}>
                 {label}{counts[s] > 0 && <span className="ml-0.5 opacity-70"> ({counts[s]})</span>}
               </button>
             );
           })}
         </div>
 
-        {/* Products */}
+        {/* Product list */}
         {loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
-            <RefreshCw className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Yuklanmoqda...</span>
+            <RefreshCw className="w-5 h-5 animate-spin" /><span className="text-sm">Yuklanmoqda...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -713,95 +949,64 @@ export default function MyStore() {
                 ? p.status as keyof typeof STATUS_MAP : "pending";
               const S = STATUS_MAP[st]; const Ic = S.icon;
               const imgs = (p.images ?? []).filter(Boolean);
-              const mainImg = imgs[0];
-
-              // Price % for card
-              const cardPct = p.oldPrice
-                ? calcPctDiff(p.price, p.oldPrice) : null;
+              const cardPct = p.oldPrice ? calcPctDiff(p.price, p.oldPrice) : null;
 
               return (
                 <div key={p.id} className="glass-card rounded-3xl p-3.5 shadow-ios-sm">
                   <div className="flex gap-3 items-start">
-                    {/* Main image */}
                     <div className="w-16 h-16 rounded-2xl bg-muted overflow-hidden shrink-0">
-                      {mainImg ? (
-                        <img src={mainImg} alt={p.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5 text-muted-foreground/40" />
-                        </div>
-                      )}
+                      {imgs[0]
+                        ? <img src={imgs[0]} alt={p.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground/40" /></div>}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="font-display font-bold text-sm leading-tight line-clamp-2">{p.name}</div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="font-bold text-sm text-primary">{formatPrice(Number(p.price))}</span>
-                        {p.oldPrice && (
-                          <span className="text-xs text-muted-foreground line-through">
-                            {formatPrice(Number(p.oldPrice))}
-                          </span>
-                        )}
+                        {p.oldPrice && <span className="text-xs text-muted-foreground line-through">{formatPrice(Number(p.oldPrice))}</span>}
                         {cardPct !== null && cardPct < 0 && (
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                            −{Math.abs(cardPct)}%
-                          </span>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">−{Math.abs(cardPct)}%</span>
                         )}
                         {cardPct !== null && cardPct > 0 && (
-                          <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md">
-                            +{cardPct}%
-                          </span>
+                          <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md">+{cardPct}%</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1.5">
                         <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", S.cls)}>
-                          <Ic className="w-3 h-3" /> {S.label}
+                          <Ic className="w-3 h-3" />{S.label}
                         </span>
-                        {p.categoryName && (
-                          <span className="text-[10px] text-muted-foreground truncate">{p.categoryName}</span>
-                        )}
+                        {p.categoryName && <span className="text-[10px] text-muted-foreground truncate">{p.categoryName}</span>}
                       </div>
-                      {/* Colors & Sizes */}
+                      {/* Specs preview */}
+                      {p.dimensions && (
+                        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{p.dimensions}</p>
+                      )}
                       {((p.colors?.length ?? 0) > 0 || (p.sizes?.length ?? 0) > 0) && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {p.colors?.map((c) => (
-                            <span key={c} className="text-[9px] px-1.5 py-0.5 bg-primary/8 text-primary rounded-md font-semibold">{c}</span>
-                          ))}
-                          {p.sizes?.map((s) => (
-                            <span key={s} className="text-[9px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md font-semibold">{s}</span>
-                          ))}
+                          {p.colors?.map((c) => <span key={c} className="text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-md font-semibold">{c}</span>)}
+                          {p.sizes?.map((s) => <span key={s} className="text-[9px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md font-semibold">{s}</span>)}
                         </div>
                       )}
                       {st === "approved" && (
                         <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                          <span className="flex items-center gap-0.5">
-                            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                            {Number(p.rating) > 0 ? Number(p.rating).toFixed(1) : "—"}
-                          </span>
+                          <span className="flex items-center gap-0.5"><Star className="w-3 h-3 text-amber-400 fill-amber-400" />{Number(p.rating) > 0 ? Number(p.rating).toFixed(1) : "—"}</span>
                           <span>{p.salesCount} sotuv</span>
                         </div>
                       )}
-                      {st === "pending" && (
-                        <p className="text-[10px] text-amber-600 mt-1">⏳ Admin tasdiqlashini kutmoqda</p>
-                      )}
+                      {st === "pending" && <p className="text-[10px] text-amber-600 mt-1">⏳ Admin ko'rib chiqmoqda…</p>}
                     </div>
-
-                    {/* Delete */}
                     <button
                       onClick={async () => {
-                        if (!confirm(`"${p.name}" mahsulotini o'chirishni tasdiqlaysizmi?`)) return;
+                        if (!confirm(`"${p.name}" o'chirilsinmi?`)) return;
                         await fetch(`/api/products/${p.id}`, { method: "DELETE" });
                         hapticFeedback("impact");
                         setProducts((prev) => prev.filter((x) => x.id !== p.id));
                       }}
-                      className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-red-100 hover:text-red-500 transition-colors shrink-0"
-                    >
+                      className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-red-100 hover:text-red-500 transition-colors shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Extra thumbnails */}
                   {imgs.length > 1 && (
                     <div className="flex gap-2 mt-2.5 overflow-x-auto scrollbar-none">
                       {imgs.slice(1).map((src, i) => (
@@ -812,7 +1017,6 @@ export default function MyStore() {
                     </div>
                   )}
 
-                  {/* Rejection block */}
                   {st === "rejected" && (
                     <div className="mt-2.5">
                       <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-2">
@@ -821,18 +1025,13 @@ export default function MyStore() {
                           {p.rejectionReason ?? "Admin tomonidan rad etildi"}
                         </p>
                       </div>
-                      {/* Edit & Resubmit buttons */}
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => { hapticFeedback("impact"); setEditProduct(p); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold hover:bg-blue-100 transition-colors"
-                        >
+                        <button onClick={() => { hapticFeedback("impact"); setEditProduct(p); }}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
                           <Pencil className="w-3.5 h-3.5" /> Tahrirlash
                         </button>
-                        <button
-                          onClick={() => handleQuickResubmit(p)}
-                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold hover:bg-amber-100 transition-colors"
-                        >
+                        <button onClick={() => handleQuickResubmit(p)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
                           <RotateCcw className="w-3.5 h-3.5" /> Qayta yuborish
                         </button>
                       </div>
@@ -845,25 +1044,16 @@ export default function MyStore() {
         )}
       </div>
 
-      {/* Add product modal */}
       {showAdd && seller && (
-        <ProductModal
-          storeId={seller.storeId}
-          categories={categories}
+        <ProductModal storeId={seller.storeId} categories={categories}
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); hapticFeedback("success"); loadData(); }}
-        />
+          onSaved={() => { setShowAdd(false); hapticFeedback("success"); loadData(); }} />
       )}
-
-      {/* Edit product modal */}
       {editProduct && seller && (
-        <ProductModal
-          storeId={seller.storeId}
-          categories={categories}
+        <ProductModal storeId={seller.storeId} categories={categories}
           editProduct={editProduct}
           onClose={() => setEditProduct(null)}
-          onSaved={() => { setEditProduct(null); hapticFeedback("success"); loadData(); }}
-        />
+          onSaved={() => { setEditProduct(null); hapticFeedback("success"); loadData(); }} />
       )}
     </MobileLayout>
   );
