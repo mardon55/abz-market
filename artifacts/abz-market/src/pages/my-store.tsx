@@ -177,20 +177,20 @@ function AddProductModal({
 
           {/* Image picker */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Mahsulot rasmi (ixtiyoriy)</label>
-            <div
-              onClick={() => fileInputRef.current?.click()}
+            <span className="block text-xs font-semibold text-muted-foreground mb-1.5">Mahsulot rasmi (ixtiyoriy)</span>
+            <label
+              htmlFor="seller-product-image"
               className={cn(
-                "relative w-full h-44 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden",
+                "relative w-full h-44 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden block",
                 imageUrl
                   ? "border-primary/40 bg-primary/5"
-                  : "border-border hover:border-primary/40 hover:bg-muted/50"
+                  : "border-border active:border-primary/40 active:bg-muted/50"
               )}
             >
               {imageUrl ? (
                 <>
                   <img src={imageUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
-                  <div className="absolute inset-0 bg-black/40 rounded-2xl flex flex-col items-center justify-center opacity-0 active:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-black/40 rounded-2xl flex flex-col items-center justify-center">
                     <Upload className="w-6 h-6 text-white mb-1" />
                     <span className="text-white text-xs font-semibold">Rasmni almashtirish</span>
                   </div>
@@ -200,18 +200,19 @@ function AddProductModal({
                   <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
                     <ImageIcon className="w-7 h-7 text-primary" />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">Galereyadan rasm tanlang</p>
+                  <p className="text-sm font-semibold text-foreground">📷 Galereyadan rasm tanlang</p>
                   <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP • Maks 5MB</p>
                 </>
               )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageFile}
-            />
+              <input
+                id="seller-product-image"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleImageFile}
+              />
+            </label>
             {imageUrl && (
               <button
                 type="button"
