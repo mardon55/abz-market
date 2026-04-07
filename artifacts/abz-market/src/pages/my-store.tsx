@@ -6,7 +6,8 @@ import {
   Trash2, X, ChevronDown, ImageIcon,
   AlertCircle, RefreshCw, Star, Send,
   Pencil, RotateCcw, Tag, Palette, Ruler,
-  ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight, Settings, Camera, Save,
+  MapPin, Phone,
 } from "lucide-react";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ interface SellerInfo { storeId: string; storeName: string; }
 interface StoreData {
   id: string; name: string; isVerified: boolean; type: string;
   phone: string | null; location: string | null; productCount: number;
+  logo: string | null; description: string | null;
 }
 interface Product {
   id: string; name: string; price: string; oldPrice: string | null;
@@ -917,6 +919,169 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   );
 }
 
+// ── Edit Store Modal ──────────────────────────────────────────
+function EditStoreModal({
+  storeId, storeName: initialName, onClose, onSaved,
+}: {
+  storeId: string; storeName: string; onClose: () => void; onSaved: (name: string) => void;
+}) {
+  const [storeData, setStoreData] = useState<Record<string, string> | null>(null);
+  const [name,        setName]        = useState(initialName);
+  const [phone,       setPhone]       = useState("");
+  const [location,    setLocation]    = useState("");
+  const [description, setDescription] = useState("");
+  const [logo,        setLogo]        = useState<string | undefined>();
+  const [saving,      setSaving]      = useState(false);
+  const [error,       setError]       = useState("");
+  const [done,        setDone]        = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch(`/api/stores/${storeId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => {
+        if (!s) return;
+        setStoreData(s);
+        setName(s.name ?? initialName);
+        setPhone(s.phone ?? "");
+        setLocation(s.location ?? "");
+        setDescription(s.description ?? "");
+        setLogo(s.logo ?? undefined);
+      }).catch(() => {});
+  }, [storeId]);
+
+  const handleLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try { setLogo(await compressImage(file)); setError(""); }
+    catch { setError("Rasmni yuklab bo'lmadi"); }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError("Do'kon nomi kiritilsin"); return; }
+    setSaving(true); setError("");
+    try {
+      const body: Record<string, string | undefined> = { name: name.trim(), phone, location, description };
+      if (logo !== undefined) body.logo = logo;
+      await fetch(`/api/stores/${storeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      try {
+        const raw = localStorage.getItem("abz_seller");
+        if (raw) {
+          const s = JSON.parse(raw);
+          s.storeName = name.trim();
+          localStorage.setItem("abz_seller", JSON.stringify(s));
+        }
+      } catch {}
+      hapticFeedback("success");
+      setDone(true);
+      setTimeout(() => { onSaved(name.trim()); onClose(); }, 900);
+    } catch {
+      setError("Saqlashda xatolik");
+      hapticFeedback("error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="shrink-0">
+          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
+            <h2 className="font-display font-bold text-base">Do'konni sozlash</h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {done ? (
+            <div className="flex flex-col items-center py-10 gap-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-primary" />
+              </div>
+              <p className="font-display font-bold text-lg">Saqlandi!</p>
+            </div>
+          ) : storeData === null ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-6 h-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                </div>
+              )}
+              {/* Logo */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-[28px] bg-muted overflow-hidden flex items-center justify-center border-2 border-border/60">
+                    {logo ? <img src={logo} alt="logo" className="w-full h-full object-cover" />
+                           : <ImageIcon className="w-8 h-8 text-muted-foreground/40" />}
+                  </div>
+                  <button type="button" onClick={() => logoRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg">
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+                <button type="button" onClick={() => logoRef.current?.click()}
+                  className="text-primary text-sm font-semibold">Logo yuklash</button>
+                <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+              </div>
+              {/* Name */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Do'kon nomi *</label>
+                <input value={name} onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              {/* Phone */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Telefon</label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+998 90 123 45 67"
+                    className="w-full pl-10 pr-4 h-11 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+              {/* Location */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Manzil</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Toshkent, Chilonzor tumani"
+                    className="w-full pl-10 pr-4 h-11 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+              {/* Description */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Tavsif</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+                  placeholder="Do'kon haqida qisqacha ma'lumot..."
+                  className="w-full px-4 py-3 bg-muted/50 border border-border/60 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              {/* Save */}
+              <button onClick={handleSave} disabled={saving}
+                className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
+                {saving
+                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  : <><Save className="w-5 h-5" /> Saqlash</>}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function MyStore() {
   const [, navigate] = useLocation();
@@ -926,9 +1091,10 @@ export default function MyStore() {
   const [products, setProducts]       = useState<Product[]>([]);
   const [categories, setCategories]   = useState<Category[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [showAdd, setShowAdd]         = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [statusFilter, setFilter]     = useState<"all"|"pending"|"approved"|"rejected">("all");
+  const [showAdd, setShowAdd]           = useState(false);
+  const [editProduct, setEditProduct]   = useState<Product | null>(null);
+  const [showStoreEdit, setShowStoreEdit] = useState(false);
+  const [statusFilter, setFilter]       = useState<"all"|"pending"|"approved"|"rejected">("all");
 
   const loadData = async () => {
     if (!seller) return;
@@ -981,8 +1147,11 @@ export default function MyStore() {
         <div className="bg-gradient-to-br from-primary via-violet-600 to-purple-700 rounded-3xl p-4 mb-5 relative overflow-hidden shadow-ios-lg shadow-primary/30">
           <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-md" />
           <div className="relative flex items-center gap-4">
-            <div className="w-14 h-14 rounded-[18px] bg-white/20 backdrop-blur-sm flex items-center justify-center font-display font-extrabold text-2xl text-white border border-white/30">
-              {seller.storeName[0]}
+            <div className="w-14 h-14 rounded-[18px] bg-white/20 backdrop-blur-sm flex items-center justify-center font-display font-extrabold text-2xl text-white border border-white/30 overflow-hidden">
+              {store?.logo
+                ? <img src={store.logo} alt="logo" className="w-full h-full object-cover" />
+                : seller.storeName[0]
+              }
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-display font-bold text-white text-lg leading-tight truncate">{seller.storeName}</h2>
@@ -992,6 +1161,13 @@ export default function MyStore() {
               </div>
               {store?.location && <p className="text-white/60 text-xs mt-0.5 truncate">{store.location}</p>}
             </div>
+            <button
+              onClick={() => { hapticFeedback("selection"); setShowStoreEdit(true); }}
+              className="w-9 h-9 bg-white/15 rounded-2xl flex items-center justify-center shrink-0"
+              title="Do'konni sozlash"
+            >
+              <Settings className="w-4 h-4 text-white" />
+            </button>
           </div>
           <div className="relative grid grid-cols-3 gap-2 mt-4">
             {[
@@ -1165,6 +1341,18 @@ export default function MyStore() {
           editProduct={editProduct}
           onClose={() => setEditProduct(null)}
           onSaved={() => { setEditProduct(null); hapticFeedback("success"); loadData(); }} />
+      )}
+      {showStoreEdit && seller && (
+        <EditStoreModal
+          storeId={seller.storeId}
+          storeName={seller.storeName}
+          onClose={() => setShowStoreEdit(false)}
+          onSaved={(newName) => {
+            seller.storeName = newName;
+            setShowStoreEdit(false);
+            loadData();
+          }}
+        />
       )}
     </MobileLayout>
   );

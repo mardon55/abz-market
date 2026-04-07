@@ -2,6 +2,17 @@ import { pgTable, text, numeric, integer, boolean, timestamp, uuid } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export const usersTable = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  telegramId: text("telegram_id").unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name"),
+  phone: text("phone"),
+  avatar: text("avatar"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const categoriesTable = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),

@@ -65,7 +65,7 @@ router.post("/stores", async (req, res) => {
 router.patch("/stores/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, name, phone, location, description, activityType } = req.body as Record<string, string>;
+    const { action, name, phone, location, description, activityType, logo, coverImage } = req.body as Record<string, string>;
 
     let updates: Record<string, unknown> = {};
 
@@ -80,6 +80,8 @@ router.patch("/stores/:id", async (req, res) => {
       if (location)     updates.location = location;
       if (description)  updates.description = description;
       if (activityType) updates.activityType = activityType;
+      if (logo !== undefined)        updates.logo = logo || null;
+      if (coverImage !== undefined)  updates.coverImage = coverImage || null;
     }
 
     if (Object.keys(updates).length === 0) {

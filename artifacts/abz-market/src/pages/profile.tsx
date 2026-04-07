@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Link, useLocation } from "wouter";
 import {
@@ -6,7 +6,7 @@ import {
   HelpCircle, LogOut, ChevronRight, Store, BarChart2,
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
   ShoppingBag, Star, Bell, Clock, CheckCircle, XCircle,
-  Plus,
+  Plus, Camera, Save, AlertCircle, ImageIcon, Pencil,
 } from "lucide-react";
 import { hapticFeedback, useTelegram } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   phone: string;
+  avatar?: string;
 }
 
 function saveProfile(p: UserProfile) {
@@ -45,6 +46,26 @@ function clearProfile() {
 
 function getInitials(p: UserProfile) {
   return (p.firstName[0] ?? "") + (p.lastName[0] ?? "");
+}
+
+// ── Image compression helper ──────────────────────────────────
+async function compressImage(file: File, maxSize = 400): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (width > height) { if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; } }
+      else { if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; } }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("No canvas context"));
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.75));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 // ── Phone formatter (+998 XX XXX XX XX) ──────────────────────
@@ -120,27 +141,41 @@ function RegisterSheet({
     if (digits.length <= 12) setPhone(formatPhone(digits));
   };
 
-  const handleSubmit = () => {
+  const { user: tgUser } = useTelegram();
+
+  const handleSubmit = async () => {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length) { hapticFeedback("error"); return; }
     hapticFeedback("impact");
     setLoading(true);
-    setTimeout(() => {
+    try {
       const profile: UserProfile = {
         firstName: firstName.trim(),
         lastName:  lastName.trim(),
         phone,
       };
       saveProfile(profile);
-      setLoading(false);
+      if (tgUser?.id) {
+        await fetch("/api/users/me", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telegramId: String(tgUser.id),
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            phone: profile.phone,
+          }),
+        }).catch(() => {});
+      }
       setDone(true);
       hapticFeedback("success");
-      setTimeout(() => {
-        onSuccess(profile);
-        onClose();
-      }, 1200);
-    }, 900);
+      setTimeout(() => { onSuccess(profile); onClose(); }, 1200);
+    } catch {
+      hapticFeedback("error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!open) return null;
@@ -272,8 +307,381 @@ function RegisterSheet({
   );
 }
 
+// ── Edit Profile Modal ────────────────────────────────────────
+function EditProfileModal({
+  user,
+  tgId,
+  onClose,
+  onSaved,
+}: {
+  user: UserProfile;
+  tgId?: number;
+  onClose: () => void;
+  onSaved: (p: UserProfile) => void;
+}) {
+  const [firstName, setFirstName] = useState(user.firstName);
+  const [lastName,  setLastName]  = useState(user.lastName ?? "");
+  const [phone,     setPhone]     = useState(user.phone ?? "");
+  const [avatar,    setAvatar]    = useState<string | undefined>(user.avatar);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState("");
+  const [done,      setDone]      = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handlePhoneChange = (val: string) => {
+    const digits = val.replace(/\D/g, "");
+    if (digits.length <= 12) setPhone(formatPhone(digits));
+  };
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("Rasm 10MB dan katta bo'lmasin"); return; }
+    try {
+      const compressed = await compressImage(file, 400);
+      setAvatar(compressed);
+      setError("");
+    } catch { setError("Rasmni yuklab bo'lmadi"); }
+  };
+
+  const handleSave = async () => {
+    if (!firstName.trim()) { setError("Ism kiritilsin"); return; }
+    setSaving(true); setError("");
+    try {
+      const updated: UserProfile = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || "",
+        phone,
+        avatar,
+      };
+      saveProfile(updated);
+      if (tgId) {
+        await fetch("/api/users/me", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telegramId: String(tgId),
+            firstName: updated.firstName,
+            lastName: updated.lastName,
+            phone: updated.phone,
+            avatar: updated.avatar ?? null,
+          }),
+        });
+      }
+      hapticFeedback("success");
+      setDone(true);
+      setTimeout(() => { onSaved(updated); onClose(); }, 900);
+    } catch {
+      setError("Saqlashda xatolik yuz berdi");
+      hapticFeedback("error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+        onClick={(e) => e.stopPropagation()}>
+
+        <div className="shrink-0">
+          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
+            <h2 className="font-display font-bold text-base">Profilni tahrirlash</h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {done ? (
+            <div className="flex flex-col items-center py-10 gap-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+              <p className="font-display font-bold text-lg">Saqlandi!</p>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                </div>
+              )}
+
+              {/* Avatar upload */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-[28px] bg-primary/10 overflow-hidden flex items-center justify-center border-2 border-primary/20">
+                    {avatar
+                      ? <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
+                      : <span className="font-display font-extrabold text-2xl text-primary">
+                          {getInitials({ firstName, lastName, phone })}
+                        </span>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="text-primary text-sm font-semibold"
+                >
+                  Rasm yuklash
+                </button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+              </div>
+
+              {/* First name */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Ism *</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Ismingizni kiriting"
+                    className="w-full pl-10 pr-4 h-11 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+
+              {/* Last name */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Familya</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={lastName} onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Familyangizni kiriting"
+                    className="w-full pl-10 pr-4 h-11 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Telefon raqam</label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input value={phone} onChange={(e) => handlePhoneChange(e.target.value)}
+                    type="tel" placeholder="+998 90 123 45 67"
+                    className="w-full pl-10 pr-4 h-11 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+
+              {/* Save button */}
+              <button onClick={handleSave} disabled={saving}
+                className="w-full h-13 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform mt-2">
+                {saving
+                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  : <><Save className="w-5 h-5" /> Saqlash</>}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Store Modal ──────────────────────────────────────────
+function EditStoreModal({
+  storeId,
+  storeName: initialName,
+  onClose,
+  onSaved,
+}: {
+  storeId: string;
+  storeName: string;
+  onClose: () => void;
+  onSaved: (name: string) => void;
+}) {
+  const [store, setStore] = useState<Record<string, string> | null>(null);
+  const [name,        setName]       = useState(initialName);
+  const [phone,       setPhone]      = useState("");
+  const [location,    setLocation]   = useState("");
+  const [description, setDescription] = useState("");
+  const [logo,        setLogo]       = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+  const [done,   setDone]   = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch(`/api/stores/${storeId}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => {
+        if (!s) return;
+        setStore(s);
+        setName(s.name ?? initialName);
+        setPhone(s.phone ?? "");
+        setLocation(s.location ?? "");
+        setDescription(s.description ?? "");
+        setLogo(s.logo ?? undefined);
+      }).catch(() => {});
+  }, [storeId]);
+
+  const handleLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 600);
+      setLogo(compressed);
+      setError("");
+    } catch { setError("Rasmni yuklab bo'lmadi"); }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError("Do'kon nomi kiritilsin"); return; }
+    setSaving(true); setError("");
+    try {
+      const body: Record<string, string | undefined> = {
+        name: name.trim(),
+        phone,
+        location,
+        description,
+      };
+      if (logo !== undefined) body.logo = logo;
+      await fetch(`/api/stores/${storeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      try {
+        const raw = localStorage.getItem("abz_seller");
+        if (raw) {
+          const s = JSON.parse(raw);
+          s.storeName = name.trim();
+          localStorage.setItem("abz_seller", JSON.stringify(s));
+        }
+      } catch {}
+      hapticFeedback("success");
+      setDone(true);
+      setTimeout(() => { onSaved(name.trim()); onClose(); }, 900);
+    } catch {
+      setError("Saqlashda xatolik");
+      hapticFeedback("error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+        onClick={(e) => e.stopPropagation()}>
+
+        <div className="shrink-0">
+          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
+            <h2 className="font-display font-bold text-base">Do'konni tahrirlash</h2>
+            <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {done ? (
+            <div className="flex flex-col items-center py-10 gap-4">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </div>
+              <p className="font-display font-bold text-lg">Saqlandi!</p>
+            </div>
+          ) : store === null ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-6 h-6 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                </div>
+              )}
+
+              {/* Logo upload */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-[28px] bg-muted overflow-hidden flex items-center justify-center border-2 border-border/60">
+                    {logo
+                      ? <img src={logo} alt="logo" className="w-full h-full object-cover" />
+                      : <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+                    }
+                  </div>
+                  <button type="button" onClick={() => logoRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg">
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+                <button type="button" onClick={() => logoRef.current?.click()}
+                  className="text-primary text-sm font-semibold">
+                  Logo yuklash
+                </button>
+                <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Do'kon nomi *</label>
+                <input value={name} onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Telefon</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)}
+                  type="tel" placeholder="+998 90 123 45 67"
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Manzil</label>
+                <input value={location} onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Toshkent, Chilonzor tumani"
+                  className="w-full h-11 px-4 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Tavsif</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+                  placeholder="Do'kon haqida qisqacha ma'lumot..."
+                  className="w-full px-4 py-3 bg-muted/50 border border-border/60 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              {/* Save */}
+              <button onClick={handleSave} disabled={saving}
+                className="w-full h-13 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
+                {saving
+                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  : <><Save className="w-5 h-5" /> Saqlash</>}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Seller store card ─────────────────────────────────────────
-function SellerStoreCard({ storeId, storeName }: { storeId: string; storeName: string }) {
+function SellerStoreCard({ storeId, storeName, onEdit }: { storeId: string; storeName: string; onEdit?: () => void }) {
   const [storeStatus, setStoreStatus] = useState<"loading" | "pending" | "approved" | "rejected">("loading");
   const [, navigate] = useLocation();
 
@@ -315,7 +723,7 @@ function SellerStoreCard({ storeId, storeName }: { storeId: string; storeName: s
           </Link>
           <Link
             href="/analytics"
-            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors"
+            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30"
             onClick={() => hapticFeedback("selection")}
           >
             <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -324,6 +732,16 @@ function SellerStoreCard({ storeId, storeName }: { storeId: string; storeName: s
             <span className="flex-1 font-medium text-sm">Analitika</span>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
+          <button
+            onClick={() => { hapticFeedback("selection"); onEdit?.(); }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-2xl bg-violet-100 flex items-center justify-center">
+              <Settings className="w-4 h-4 text-violet-600" />
+            </div>
+            <span className="flex-1 text-left font-medium text-sm">Do'konni sozlash</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
     );
@@ -373,10 +791,12 @@ function SellerStoreCard({ storeId, storeName }: { storeId: string; storeName: s
 
 // ── Main profile page ─────────────────────────────────────────
 export default function Profile() {
-  const [user, setUser]             = useState<UserProfile | null>(null);
-  const [showSheet, setShowSheet]   = useState(false);
-  const [showLogout, setShowLogout] = useState(false);
-  const [sellerInfo, setSellerInfo] = useState<SellerInfo | null>(null);
+  const [user, setUser]                 = useState<UserProfile | null>(null);
+  const [showSheet, setShowSheet]       = useState(false);
+  const [showLogout, setShowLogout]     = useState(false);
+  const [showEdit, setShowEdit]         = useState(false);
+  const [showStoreEdit, setShowStoreEdit] = useState(false);
+  const [sellerInfo, setSellerInfo]     = useState<SellerInfo | null>(null);
   const { user: tgUser } = useTelegram();
 
   const isAdmin = tgUser?.id === ADMIN_TG_ID;
@@ -498,8 +918,19 @@ export default function Profile() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-sm" />
               <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-white/5 rounded-full blur-sm" />
               <div className="relative flex items-center gap-4">
-                <div className="w-16 h-16 rounded-[22px] bg-white/20 backdrop-blur-sm flex items-center justify-center font-display font-extrabold text-xl text-white border border-white/30">
-                  {getInitials(user).toUpperCase()}
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-[22px] bg-white/20 backdrop-blur-sm flex items-center justify-center font-display font-extrabold text-xl text-white border border-white/30 overflow-hidden">
+                    {user.avatar
+                      ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                      : getInitials(user).toUpperCase()
+                    }
+                  </div>
+                  <button
+                    onClick={() => { hapticFeedback("selection"); setShowEdit(true); }}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
+                  >
+                    <Pencil className="w-3 h-3 text-primary" />
+                  </button>
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="font-display font-bold text-white text-lg leading-tight">
@@ -512,7 +943,7 @@ export default function Profile() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { hapticFeedback("selection"); }}
+                  onClick={() => { hapticFeedback("selection"); setShowEdit(true); }}
                   className="w-9 h-9 bg-white/15 rounded-2xl flex items-center justify-center shrink-0"
                 >
                   <Settings className="w-4 h-4 text-white" />
@@ -542,7 +973,11 @@ export default function Profile() {
 
           {/* Seller section — dynamic based on store registration status */}
           {sellerInfo ? (
-            <SellerStoreCard storeId={sellerInfo.storeId} storeName={sellerInfo.storeName} />
+            <SellerStoreCard
+              storeId={sellerInfo.storeId}
+              storeName={sellerInfo.storeName}
+              onEdit={() => setShowStoreEdit(true)}
+            />
           ) : (
             <div className="mx-4 mb-5">
               <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
@@ -598,6 +1033,29 @@ export default function Profile() {
         onClose={() => setShowSheet(false)}
         onSuccess={(p) => setUser(p)}
       />
+
+      {/* ── Edit profile modal ── */}
+      {showEdit && user && (
+        <EditProfileModal
+          user={user}
+          tgId={tgUser?.id}
+          onClose={() => setShowEdit(false)}
+          onSaved={(p) => { setUser(p); setShowEdit(false); }}
+        />
+      )}
+
+      {/* ── Edit store modal ── */}
+      {showStoreEdit && sellerInfo && (
+        <EditStoreModal
+          storeId={sellerInfo.storeId}
+          storeName={sellerInfo.storeName}
+          onClose={() => setShowStoreEdit(false)}
+          onSaved={(newName) => {
+            setSellerInfo((prev) => prev ? { ...prev, storeName: newName } : prev);
+            setShowStoreEdit(false);
+          }}
+        />
+      )}
 
       {/* ── Logout confirmation ── */}
       {showLogout && (
