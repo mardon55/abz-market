@@ -139,19 +139,14 @@ router.patch("/products/:id", async (req, res) => {
     const { id } = req.params;
     const {
       name, price, oldPrice, description, images, categoryId, storeId,
-      isFeatured, isTopSelling, discount, colors, dimensions, warranty,
+      isFeatured, isTopSelling, discount, colors, sizes, dimensions, warranty,
       deliveryDays, action,
     } = req.body as Record<string, unknown>;
 
     const updates: Record<string, unknown> = {};
 
-    if (action === "approve") {
-      updates.status = "approved";
-      updates.rejectionReason = null;
-    } else if (action === "reject") {
-      updates.status = "rejected";
-      if (req.body.rejectionReason) updates.rejectionReason = String(req.body.rejectionReason);
-    } else {
+    // helper to apply all regular product field updates
+    const applyFields = () => {
       if (name !== undefined)         updates.name = String(name);
       if (price !== undefined)        updates.price = String(price);
       if (oldPrice !== undefined)     updates.oldPrice = oldPrice ? String(oldPrice) : null;
@@ -163,9 +158,25 @@ router.patch("/products/:id", async (req, res) => {
       if (isTopSelling !== undefined) updates.isTopSelling = Boolean(isTopSelling);
       if (discount !== undefined)     updates.discount = discount ? Number(discount) : null;
       if (colors !== undefined)       updates.colors = Array.isArray(colors) ? colors : null;
+      if (sizes !== undefined)        updates.sizes  = Array.isArray(sizes)  ? sizes  : null;
       if (dimensions !== undefined)   updates.dimensions = dimensions ? String(dimensions) : null;
       if (warranty !== undefined)     updates.warranty = warranty ? String(warranty) : null;
       if (deliveryDays !== undefined) updates.deliveryDays = deliveryDays ? Number(deliveryDays) : 3;
+    };
+
+    if (action === "approve") {
+      updates.status = "approved";
+      updates.rejectionReason = null;
+    } else if (action === "reject") {
+      updates.status = "rejected";
+      if (req.body.rejectionReason) updates.rejectionReason = String(req.body.rejectionReason);
+    } else if (action === "resubmit") {
+      // Seller edited a rejected product and resubmits for review
+      updates.status = "pending";
+      updates.rejectionReason = null;
+      applyFields();
+    } else {
+      applyFields();
     }
 
     if (Object.keys(updates).length === 0) {
