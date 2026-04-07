@@ -382,7 +382,7 @@ function EditProfileModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}
         onClick={(e) => e.stopPropagation()}>
 
         <div className="shrink-0">
@@ -395,7 +395,7 @@ function EditProfileModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4">
           {done ? (
             <div className="flex flex-col items-center py-10 gap-4">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
@@ -476,16 +476,21 @@ function EditProfileModal({
                 </div>
               </div>
 
-              {/* Save button */}
-              <button onClick={handleSave} disabled={saving}
-                className="w-full h-13 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform mt-2">
-                {saving
-                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  : <><Save className="w-5 h-5" /> Saqlash</>}
-              </button>
             </>
           )}
         </div>
+
+        {/* Fixed footer */}
+        {!done && (
+          <div className="shrink-0 px-5 pb-6 pt-3 border-t border-border/40 bg-background">
+            <button onClick={handleSave} disabled={saving}
+              className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
+              {saving
+                ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                : <><Save className="w-5 h-5" /> Saqlash</>}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -576,7 +581,7 @@ function EditStoreModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}
         onClick={(e) => e.stopPropagation()}>
 
         <div className="shrink-0">
@@ -589,7 +594,7 @@ function EditStoreModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4">
           {done ? (
             <div className="flex flex-col items-center py-10 gap-4">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
@@ -665,16 +670,21 @@ function EditStoreModal({
                 />
               </div>
 
-              {/* Save */}
-              <button onClick={handleSave} disabled={saving}
-                className="w-full h-13 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
-                {saving
-                  ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  : <><Save className="w-5 h-5" /> Saqlash</>}
-              </button>
             </>
           )}
         </div>
+
+        {/* Fixed footer */}
+        {!done && store !== null && (
+          <div className="shrink-0 px-5 pb-6 pt-3 border-t border-border/40 bg-background">
+            <button onClick={handleSave} disabled={saving}
+              className="w-full h-14 bg-gradient-to-r from-primary to-violet-500 text-white font-display font-bold text-base rounded-2xl flex items-center justify-center gap-2.5 disabled:opacity-60 shadow-lg shadow-primary/30 active:scale-[0.98] transition-transform">
+              {saving
+                ? <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                : <><Save className="w-5 h-5" /> Saqlash</>}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

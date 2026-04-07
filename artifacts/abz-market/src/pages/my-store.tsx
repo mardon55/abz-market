@@ -650,7 +650,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative mt-auto bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}>
+      <div className="relative mt-auto bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}>
 
         {/* Header */}
         <div className="shrink-0">
@@ -678,7 +678,7 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
           {error && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 rounded-xl text-sm">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /><span>{error}</span>
@@ -990,7 +990,7 @@ function EditStoreModal({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "92svh" }}
+      <div className="relative bg-background rounded-t-3xl shadow-2xl flex flex-col" style={{ maxHeight: "80svh" }}
         onClick={(e) => e.stopPropagation()}>
         <div className="shrink-0">
           <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mt-3" />
@@ -1001,7 +1001,7 @@ function EditStoreModal({
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4">
           {done ? (
             <div className="flex flex-col items-center py-10 gap-4">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
