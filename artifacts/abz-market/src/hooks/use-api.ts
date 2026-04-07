@@ -64,14 +64,15 @@ export function useCategories() {
   });
 }
 
-export function useOrders(params?: GetOrdersParams) {
+export function useOrders(params?: GetOrdersParams, options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ['/api/orders', params],
     queryFn: async () => {
       const data = await getOrders(params);
       if (data && data.orders) return data;
       return { orders: [] };
-    }
+    },
+    refetchInterval: options?.refetchInterval,
   });
 }
 

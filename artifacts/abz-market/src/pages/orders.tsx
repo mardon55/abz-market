@@ -26,7 +26,7 @@ export default function Orders() {
     return Object.keys(p).length > 0 ? p : undefined;
   }, [activeTab, telegramId]);
 
-  const { data, isLoading, isError } = useOrders(params as any);
+  const { data, isLoading, isError } = useOrders(params as any, { refetchInterval: 15_000 });
 
   const tabs = [
     { id: "all",      label: "Barchasi" },
