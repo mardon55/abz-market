@@ -330,7 +330,7 @@ export default function Home() {
       <div className="sticky top-0 z-40 glass border-b border-white/40 px-4 py-3 flex items-center justify-between">
         <div>
           <h1 className="font-display font-extrabold text-[22px] text-gradient tracking-tight leading-none">
-            ABZ Market
+            ABZ_MARKET
           </h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">Onlayn bozor cho'ntagingizda</p>
         </div>
