@@ -686,111 +686,186 @@ function EditStoreModal({
   );
 }
 
-// ── Seller store card ─────────────────────────────────────────
-function SellerStoreCard({ storeId, storeName, onEdit }: { storeId: string; storeName: string; onEdit?: () => void }) {
-  const [storeStatus, setStoreStatus] = useState<"loading" | "pending" | "approved" | "rejected">("loading");
+// ── Multiple stores section ───────────────────────────────────
+interface StoreItem {
+  id: string;
+  name: string;
+  type: string;
+  isVerified: boolean;
+  logo: string | null;
+  productCount: number | null;
+}
+
+function MultipleStoresSection({ telegramId, onEditStore }: {
+  telegramId: string | null;
+  onEditStore: (storeId: string, storeName: string) => void;
+}) {
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    fetch(`/api/stores/${storeId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((s) => {
-        if (!s) return setStoreStatus("rejected");
-        if (s.type === "pending")   return setStoreStatus("pending");
-        if (s.type === "rejected")  return setStoreStatus("rejected");
-        if (s.isVerified)           return setStoreStatus("approved");
-        setStoreStatus("pending");
-      })
-      .catch(() => setStoreStatus("pending"));
-  }, [storeId]);
+    if (!telegramId) return;
+    setLoading(true);
+    fetch(`/api/stores?telegramId=${telegramId}`)
+      .then((r) => r.ok ? r.json() : { stores: [] })
+      .then((data) => setStores(data.stores ?? []))
+      .catch(() => setStores([]))
+      .finally(() => setLoading(false));
+  }, [telegramId]);
 
-  if (storeStatus === "loading") return null;
+  const activateStore = (store: StoreItem) => {
+    hapticFeedback("selection");
+    try {
+      const entry = { storeId: store.id, storeName: store.name };
+      localStorage.setItem("abz_seller", JSON.stringify(entry));
+      const raw = localStorage.getItem("abz_stores");
+      const existing: typeof entry[] = raw ? JSON.parse(raw) : [];
+      const updated = [...existing.filter(s => s.storeId !== store.id), entry];
+      localStorage.setItem("abz_stores", JSON.stringify(updated));
+    } catch {}
+    navigate("/my-store");
+  };
 
-  if (storeStatus === "approved") {
-    return (
-      <div className="mx-4 mb-5">
-        <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
-        <div className="glass-card rounded-3xl overflow-hidden shadow-ios-sm">
-          <Link
-            href="/my-store"
-            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30"
-            onClick={() => hapticFeedback("selection")}
-          >
-            <div className="w-9 h-9 rounded-2xl bg-emerald-100 flex items-center justify-center">
-              <Store className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-sm">{storeName}</div>
-              <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> Tasdiqlangan do'kon
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <Link
-            href="/analytics"
-            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30"
-            onClick={() => hapticFeedback("selection")}
-          >
-            <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <BarChart2 className="w-4 h-4 text-primary" />
-            </div>
-            <span className="flex-1 font-medium text-sm">Analitika</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <button
-            onClick={() => { hapticFeedback("selection"); onEdit?.(); }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-2xl bg-violet-100 flex items-center justify-center">
-              <Settings className="w-4 h-4 text-violet-600" />
-            </div>
-            <span className="flex-1 text-left font-medium text-sm">Do'konni sozlash</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const getStatusBadge = (store: StoreItem) => {
+    if (store.type === "rejected") {
+      return (
+        <span className="text-[11px] text-red-500 font-semibold flex items-center gap-1">
+          <XCircle className="w-3 h-3" /> Rad etildi
+        </span>
+      );
+    }
+    if (store.type === "pending") {
+      return (
+        <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1">
+          <Clock className="w-3 h-3" /> Tasdiqlash kutilmoqda
+        </span>
+      );
+    }
+    if (store.isVerified || store.type === "partner") {
+      return (
+        <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" /> Tasdiqlangan
+        </span>
+      );
+    }
+    return null;
+  };
 
-  if (storeStatus === "pending") {
-    return (
-      <div className="mx-4 mb-5">
-        <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
-        <div className="glass-card rounded-3xl px-4 py-4 shadow-ios-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold text-sm">{storeName}</div>
-            <div className="text-[12px] text-amber-600 font-medium mt-0.5">Ariza admin tasdiqlashini kutmoqda</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="mx-4 mb-5">
-      <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
-      <div className="glass-card rounded-3xl px-4 py-4 shadow-ios-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
-            <XCircle className="w-5 h-5 text-red-500" />
-          </div>
-          <div>
-            <div className="font-semibold text-sm">Ariza rad etildi</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Qayta ariza yuborish mumkin</div>
-          </div>
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Sotuvchi paneli</h3>
+        {stores.length > 0 && (
+          <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+            {stores.length} ta do'kon
+          </span>
+        )}
+      </div>
+
+      {stores.length === 0 ? (
         <Link
           href="/register-store"
-          className="w-full h-10 bg-primary text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+          className="glass-card rounded-3xl px-4 py-3.5 flex items-center gap-3 shadow-ios-sm active:bg-black/5 transition-colors"
           onClick={() => hapticFeedback("impact")}
         >
-          <Plus className="w-4 h-4" /> Qayta ro'yxatdan o'tish
+          <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Store className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="font-medium text-sm">Do'kon ochish</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">ABZ Market'da sotuvchi bo'ling</div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </Link>
-      </div>
+      ) : (
+        <div className="glass-card rounded-3xl overflow-hidden shadow-ios-sm">
+          {stores.map((store, idx) => {
+            const isApproved = store.isVerified || store.type === "partner";
+            const isRejected = store.type === "rejected";
+            const isPending = store.type === "pending";
+            return (
+              <div key={store.id}>
+                {idx > 0 && <div className="h-px bg-border/50 mx-4" />}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className={cn(
+                    "w-9 h-9 rounded-2xl flex items-center justify-center shrink-0",
+                    isApproved ? "bg-emerald-100" : isPending ? "bg-amber-50" : "bg-red-50"
+                  )}>
+                    {store.logo ? (
+                      <img src={store.logo} alt={store.name} className="w-full h-full object-cover rounded-2xl" />
+                    ) : (
+                      <Store className={cn("w-4 h-4", isApproved ? "text-emerald-600" : isPending ? "text-amber-500" : "text-red-500")} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{store.name}</div>
+                    {getStatusBadge(store)}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isApproved && (
+                      <button
+                        onClick={() => activateStore(store)}
+                        className="h-7 px-3 bg-primary/10 text-primary rounded-lg text-xs font-bold active:scale-95 transition-transform"
+                      >
+                        Boshqarish
+                      </button>
+                    )}
+                    {isPending && (
+                      <span className="h-7 px-3 bg-amber-50 text-amber-600 rounded-lg text-xs font-semibold flex items-center">
+                        Kutilmoqda
+                      </span>
+                    )}
+                    {isRejected && (
+                      <Link
+                        href="/register-store"
+                        onClick={() => hapticFeedback("impact")}
+                        className="h-7 px-3 bg-red-50 text-red-600 rounded-lg text-xs font-bold"
+                      >
+                        Qayta ariza
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Analytics row for approved stores */}
+          {stores.some(s => s.isVerified || s.type === "partner") && (
+            <>
+              <div className="h-px bg-border/50 mx-4" />
+              <Link
+                href="/analytics"
+                className="flex items-center gap-3 px-4 py-3 active:bg-black/5 transition-colors"
+                onClick={() => hapticFeedback("selection")}
+              >
+                <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4 text-primary" />
+                </div>
+                <span className="flex-1 font-medium text-sm">Analitika</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </Link>
+            </>
+          )}
+
+          {/* Add new store row */}
+          <div className="h-px bg-border/50 mx-4" />
+          <Link
+            href="/register-store"
+            className="flex items-center gap-3 px-4 py-3 active:bg-black/5 transition-colors"
+            onClick={() => hapticFeedback("impact")}
+          >
+            <div className="w-9 h-9 rounded-2xl bg-violet-100 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-violet-600" />
+            </div>
+            <span className="flex-1 font-medium text-sm text-violet-700">Yangi do'kon qo'shish</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -976,32 +1051,14 @@ export default function Profile() {
           {/* Menu sections */}
           <MenuSection items={menuItems} title="Asosiy" />
 
-          {/* Seller section — dynamic based on store registration status */}
-          {sellerInfo ? (
-            <SellerStoreCard
-              storeId={sellerInfo.storeId}
-              storeName={sellerInfo.storeName}
-              onEdit={() => setShowStoreEdit(true)}
-            />
-          ) : (
-            <div className="mx-4 mb-5">
-              <h3 className="px-0 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Sotuvchi paneli</h3>
-              <Link
-                href="/register-store"
-                className="glass-card rounded-3xl px-4 py-3.5 flex items-center gap-3 shadow-ios-sm active:bg-black/5 transition-colors"
-                onClick={() => hapticFeedback("impact")}
-              >
-                <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Store className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-sm">Do'kon ochish</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">ABZ Market'da sotuvchi bo'ling</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </Link>
-            </div>
-          )}
+          {/* Seller section — shows all stores by telegramId */}
+          <MultipleStoresSection
+            telegramId={tgUser?.id ? String(tgUser.id) : null}
+            onEditStore={(storeId, storeName) => {
+              setSellerInfo({ storeId, storeName });
+              setShowStoreEdit(true);
+            }}
+          />
 
           <MenuSection items={settingsItems} title="Qo'shimcha" />
 

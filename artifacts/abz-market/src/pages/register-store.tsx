@@ -118,10 +118,18 @@ export default function RegisterStore() {
     setStep(2);
   };
 
+  const getTelegramId = () => {
+    return (
+      String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id ?? "") ||
+      localStorage.getItem("tg_user_id") || ""
+    );
+  };
+
   const handleStep2 = async (data: Step2Form) => {
     haptic("success");
     setIsSubmitting(true);
     try {
+      const tgId = getTelegramId();
       const res = await fetch("/api/stores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,16 +140,19 @@ export default function RegisterStore() {
           phone: data.phone,
           location: `${data.region}, ${data.address}`,
           description: data.description,
+          ownerTelegramId: tgId || undefined,
         }),
       });
       if (!res.ok) throw new Error("Server xatosi");
       const storeResult = await res.json();
       if (storeResult?.id) {
         try {
-          localStorage.setItem(
-            "abz_seller",
-            JSON.stringify({ storeId: storeResult.id, storeName: step1Data!.name }),
-          );
+          const newEntry = { storeId: storeResult.id, storeName: step1Data!.name };
+          localStorage.setItem("abz_seller", JSON.stringify(newEntry));
+          const raw = localStorage.getItem("abz_stores");
+          const existing: typeof newEntry[] = raw ? JSON.parse(raw) : [];
+          const updated = [...existing.filter(s => s.storeId !== storeResult.id), newEntry];
+          localStorage.setItem("abz_stores", JSON.stringify(updated));
         } catch {}
       }
     } catch {

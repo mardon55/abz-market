@@ -7,7 +7,7 @@ import {
   AlertCircle, RefreshCw, Star, Send,
   Pencil, RotateCcw, Tag, Palette, Ruler,
   ToggleLeft, ToggleRight, Settings, Camera, Save,
-  MapPin, Phone,
+  MapPin, Phone, Store,
 } from "lucide-react";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -1085,10 +1085,20 @@ function EditStoreModal({
   );
 }
 
+// ── Store switcher helpers ────────────────────────────────────
+function loadAllStores(): SellerInfo[] {
+  try {
+    const raw = localStorage.getItem("abz_stores");
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function MyStore() {
   const [, navigate] = useLocation();
-  const seller = loadSeller();
+  const [activeSeller, setActiveSeller] = useState<SellerInfo | null>(loadSeller);
+  const [allStores, setAllStores]       = useState<SellerInfo[]>(loadAllStores);
+  const [showSwitcher, setShowSwitcher] = useState(false);
 
   const [store, setStore]             = useState<StoreData | null>(null);
   const [products, setProducts]       = useState<Product[]>([]);
@@ -1099,13 +1109,17 @@ export default function MyStore() {
   const [showStoreEdit, setShowStoreEdit] = useState(false);
   const [statusFilter, setFilter]       = useState<"all"|"pending"|"approved"|"rejected">("all");
 
-  const loadData = async () => {
-    if (!seller) return;
+  const seller = activeSeller;
+
+  const loadData = async (sel = activeSeller) => {
+    if (!sel) return;
     setLoading(true);
+    setStore(null);
+    setProducts([]);
     try {
       const [storeRes, prodsRes, catRes] = await Promise.all([
-        fetch(`/api/stores/${seller.storeId}`),
-        fetch(`/api/products?storeId=${seller.storeId}&status=all`),
+        fetch(`/api/stores/${sel.storeId}`),
+        fetch(`/api/products?storeId=${sel.storeId}&status=all`),
         fetch("/api/categories"),
       ]);
       if (storeRes.ok) setStore(await storeRes.json());
@@ -1115,9 +1129,17 @@ export default function MyStore() {
   };
 
   useEffect(() => {
-    if (!seller) { navigate("/register-store"); return; }
-    loadData();
-  }, []);
+    if (!activeSeller) { navigate("/register-store"); return; }
+    loadData(activeSeller);
+  }, [activeSeller]);
+
+  const switchStore = (s: SellerInfo) => {
+    hapticFeedback("selection");
+    try { localStorage.setItem("abz_seller", JSON.stringify(s)); } catch {}
+    setActiveSeller(s);
+    setShowSwitcher(false);
+    setFilter("all");
+  };
 
   const handleQuickResubmit = async (p: Product) => {
     if (!confirm(`"${p.name}" ni qayta tekshirishga yuborishni tasdiqlaysizmi?`)) return;
@@ -1145,6 +1167,59 @@ export default function MyStore() {
   return (
     <MobileLayout hideNav={false} title="Do'konim">
       <div className="px-4 pt-4 pb-24">
+
+        {/* Store switcher — visible only if user has multiple stores */}
+        {allStores.length > 1 && (
+          <div className="mb-3">
+            <button
+              onClick={() => { hapticFeedback("selection"); setShowSwitcher(v => !v); }}
+              className="w-full flex items-center gap-2 bg-primary/10 rounded-2xl px-4 py-2.5 active:scale-[0.98] transition-transform"
+            >
+              <Store className="w-4 h-4 text-primary shrink-0" />
+              <span className="flex-1 text-left font-semibold text-sm text-primary truncate">
+                {seller?.storeName}
+              </span>
+              <ChevronDown className={cn("w-4 h-4 text-primary transition-transform", showSwitcher && "rotate-180")} />
+            </button>
+            {showSwitcher && (
+              <div className="mt-1.5 bg-card border border-border/60 rounded-2xl overflow-hidden shadow-lg">
+                {allStores.map((s, idx) => (
+                  <button
+                    key={s.storeId}
+                    onClick={() => switchStore(s)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                      idx > 0 && "border-t border-border/40",
+                      s.storeId === seller?.storeId ? "bg-primary/5" : "active:bg-muted/50"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm",
+                      s.storeId === seller?.storeId ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                    )}>
+                      {s.storeName[0]}
+                    </div>
+                    <span className="flex-1 font-medium text-sm truncate">{s.storeName}</span>
+                    {s.storeId === seller?.storeId && (
+                      <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                    )}
+                  </button>
+                ))}
+                <div className="border-t border-border/40">
+                  <button
+                    onClick={() => { hapticFeedback("impact"); setShowSwitcher(false); navigate("/register-store"); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <span className="font-semibold text-sm text-violet-700">Yangi do'kon qo'shish</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Store banner */}
         <div className="bg-gradient-to-br from-primary via-violet-600 to-purple-700 rounded-3xl p-4 mb-5 relative overflow-hidden shadow-ios-lg shadow-primary/30">

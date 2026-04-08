@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Trash2, Eye, Star, Package, TrendingUp,
   CheckCircle, XCircle, Clock, RefreshCw, AlertCircle, X,
-  Phone, MapPin, Building2, FileText,
+  Phone, MapPin, Building2, FileText, UserCheck, Pencil, Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ interface ApiStore {
   stir: string | null;
   activityType: string | null;
   isVerified: boolean;
+  ownerTelegramId: string | null;
   createdAt: string;
 }
 
@@ -67,16 +68,36 @@ function StoreModal({
   onApprove,
   onReject,
   isBusy,
+  onTelegramIdSaved,
 }: {
   store: ApiStore;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
   isBusy: boolean;
+  onTelegramIdSaved?: (id: string, tgId: string) => void;
 }) {
   const status = getStatus(store);
   const S = STATUS_MAP[status];
   const Icon = S.icon;
+  const [editTgId, setEditTgId] = useState(false);
+  const [tgIdVal, setTgIdVal]   = useState(store.ownerTelegramId ?? "");
+  const [savingTgId, setSavingTgId] = useState(false);
+
+  const saveTelegramId = async () => {
+    setSavingTgId(true);
+    try {
+      const r = await fetch(`/api/stores/${store.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerTelegramId: tgIdVal || null }),
+      });
+      if (r.ok) {
+        onTelegramIdSaved?.(store.id, tgIdVal);
+        setEditTgId(false);
+      }
+    } finally { setSavingTgId(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -149,6 +170,46 @@ function StoreModal({
                 <div className="text-sm">{store.description}</div>
               </div>
             )}
+
+            {/* Owner Telegram ID — editable */}
+            <div className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200/60 dark:border-violet-700/40">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs text-violet-600 font-semibold flex items-center gap-1">
+                  <UserCheck className="w-3 h-3" /> Egasining Telegram ID
+                </div>
+                {!editTgId && (
+                  <button onClick={() => setEditTgId(true)} className="text-xs text-violet-600 hover:text-violet-800 flex items-center gap-0.5">
+                    <Pencil className="w-3 h-3" /> Tahrirlash
+                  </button>
+                )}
+              </div>
+              {editTgId ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={tgIdVal}
+                    onChange={(e) => setTgIdVal(e.target.value)}
+                    placeholder="Telegram ID (masalan: 123456789)"
+                    className="flex-1 h-8 px-2 rounded-lg border border-violet-300 text-sm bg-white dark:bg-violet-900/30 dark:border-violet-600"
+                  />
+                  <button
+                    onClick={saveTelegramId}
+                    disabled={savingTgId}
+                    className="h-8 px-3 bg-violet-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-60"
+                  >
+                    <Save className="w-3 h-3" /> Saqlash
+                  </button>
+                  <button onClick={() => { setEditTgId(false); setTgIdVal(store.ownerTelegramId ?? ""); }} className="h-8 w-8 bg-muted rounded-lg flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm font-mono font-semibold text-violet-800 dark:text-violet-300">
+                  {store.ownerTelegramId ?? <span className="text-muted-foreground font-normal font-sans italic">Belgilanmagan</span>}
+                </div>
+              )}
+            </div>
+
             <div className="p-3 bg-muted/40 rounded-xl">
               <div className="text-xs text-muted-foreground mb-1">Ariza sanasi</div>
               <div className="text-sm font-semibold">
@@ -473,6 +534,7 @@ export default function Stores() {
           onApprove={() => patchMut.mutate({ id: selected.id, action: "approve" })}
           onReject={() => patchMut.mutate({ id: selected.id, action: "reject" })}
           isBusy={patchMut.isPending}
+          onTelegramIdSaved={() => qc.invalidateQueries({ queryKey: ["admin-stores"] })}
         />
       )}
     </div>

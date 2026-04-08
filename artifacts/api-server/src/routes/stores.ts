@@ -1,21 +1,22 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { storesTable } from "@workspace/db/schema";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, and } from "drizzle-orm";
 import { CreateStoreBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.get("/stores", async (req, res) => {
   try {
-    const { search, type } = req.query as Record<string, string>;
+    const { search, type, telegramId } = req.query as Record<string, string>;
 
     const conditions = [];
     if (search) conditions.push(ilike(storesTable.name, `%${search}%`));
     if (type) conditions.push(eq(storesTable.type, type));
+    if (telegramId) conditions.push(eq(storesTable.ownerTelegramId, telegramId));
 
     const stores = conditions.length > 0
-      ? await db.select().from(storesTable).where(conditions.length === 1 ? conditions[0] : or(...conditions))
+      ? await db.select().from(storesTable).where(conditions.length === 1 ? conditions[0] : and(...conditions))
       : await db.select().from(storesTable);
 
     res.json({ stores });
@@ -40,6 +41,7 @@ router.get("/stores/:id", async (req, res) => {
 router.post("/stores", async (req, res) => {
   try {
     const body = CreateStoreBody.parse(req.body);
+    const ownerTelegramId = (req.body as Record<string, string>).ownerTelegramId ?? null;
 
     const [newStore] = await db
       .insert(storesTable)
@@ -50,6 +52,7 @@ router.post("/stores", async (req, res) => {
         phone: body.phone,
         description: body.description,
         stir: body.stir,
+        ownerTelegramId,
         type: "pending",
         isVerified: false,
       })
@@ -65,7 +68,8 @@ router.post("/stores", async (req, res) => {
 router.patch("/stores/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { action, name, phone, location, description, activityType, logo, coverImage } = req.body as Record<string, string>;
+    const body = req.body as Record<string, unknown>;
+    const { action, name, phone, location, description, activityType, logo, coverImage } = body as Record<string, string>;
 
     let updates: Record<string, unknown> = {};
 
@@ -82,6 +86,7 @@ router.patch("/stores/:id", async (req, res) => {
       if (activityType) updates.activityType = activityType;
       if (logo !== undefined)        updates.logo = logo || null;
       if (coverImage !== undefined)  updates.coverImage = coverImage || null;
+      if ("ownerTelegramId" in body) updates.ownerTelegramId = body.ownerTelegramId as string | null;
     }
 
     if (Object.keys(updates).length === 0) {

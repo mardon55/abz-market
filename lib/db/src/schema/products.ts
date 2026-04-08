@@ -25,6 +25,7 @@ export const categoriesTable = pgTable("categories", {
 export const storesTable = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  ownerTelegramId: text("owner_telegram_id"),
   logo: text("logo"),
   coverImage: text("cover_image"),
   description: text("description"),
