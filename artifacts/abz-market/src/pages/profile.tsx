@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Link, useLocation } from "wouter";
 import {
-  Settings, Package, Heart, MapPin, CreditCard,
+  Settings, Package, Heart, MapPin,
   HelpCircle, LogOut, ChevronRight, Store, BarChart2,
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
   ShoppingBag, Star, Bell, Clock, CheckCircle, XCircle,
@@ -903,9 +903,8 @@ export default function Profile() {
 
   const menuItems = [
     { icon: Package,    label: "Buyurtmalarim",       path: "/orders" },
-    { icon: Heart,      label: "Sevimli mahsulotlar", path: "/favorites" },
-    { icon: MapPin,     label: "Manzillarim",         path: "/addresses" },
-    { icon: CreditCard, label: "To'lov usullari",     path: "/payments" },
+    { icon: Heart,  label: "Sevimli mahsulotlar", path: "/favorites" },
+    { icon: MapPin, label: "Manzillarim",         path: "/addresses" },
   ];
 
   const settingsItems = [
