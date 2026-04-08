@@ -1093,12 +1093,22 @@ function loadAllStores(): SellerInfo[] {
   } catch { return []; }
 }
 
+// ── Helpers ───────────────────────────────────────────────────
+function getTelegramId(): string {
+  try {
+    const id = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (id) return String(id);
+    return localStorage.getItem("tg_user_id") ?? "";
+  } catch { return ""; }
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function MyStore() {
   const [, navigate] = useLocation();
   const [activeSeller, setActiveSeller] = useState<SellerInfo | null>(loadSeller);
   const [allStores, setAllStores]       = useState<SellerInfo[]>(loadAllStores);
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [autoDetecting, setAutoDetecting] = useState(!loadSeller()); // true while resolving
 
   const [store, setStore]             = useState<StoreData | null>(null);
   const [products, setProducts]       = useState<Product[]>([]);
@@ -1129,9 +1139,41 @@ export default function MyStore() {
   };
 
   useEffect(() => {
-    if (!activeSeller) { navigate("/register-store"); return; }
-    loadData(activeSeller);
-  }, [activeSeller]);
+    if (activeSeller) {
+      setAutoDetecting(false);
+      loadData(activeSeller);
+      return;
+    }
+
+    // No localStorage entry — try to find stores by Telegram ID
+    const tgId = getTelegramId();
+    if (!tgId) {
+      setAutoDetecting(false);
+      navigate("/register-store");
+      return;
+    }
+
+    fetch(`/api/stores?telegramId=${tgId}`)
+      .then(r => r.json())
+      .then(d => {
+        const stores: any[] = d.stores ?? [];
+        if (stores.length === 0) {
+          navigate("/register-store");
+          return;
+        }
+        // Build SellerInfo entries and persist to localStorage
+        const entries: SellerInfo[] = stores.map(s => ({ storeId: s.id, storeName: s.name }));
+        try { localStorage.setItem("abz_stores", JSON.stringify(entries)); } catch {}
+        try { localStorage.setItem("abz_seller", JSON.stringify(entries[0])); } catch {}
+        setAllStores(entries);
+        setActiveSeller(entries[0]);
+        setAutoDetecting(false);
+      })
+      .catch(() => {
+        setAutoDetecting(false);
+        navigate("/register-store");
+      });
+  }, []);
 
   const switchStore = (s: SellerInfo) => {
     hapticFeedback("selection");
@@ -1153,6 +1195,18 @@ export default function MyStore() {
       hapticFeedback("success"); loadData();
     } catch { alert("Xato yuz berdi"); }
   };
+
+  // While auto-detecting store from Telegram ID — show spinner
+  if (autoDetecting) {
+    return (
+      <MobileLayout hideNav={false} title="Do'konim">
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <p className="text-sm text-muted-foreground font-medium">Do'kon topilmoqda...</p>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   if (!seller) return null;
 
