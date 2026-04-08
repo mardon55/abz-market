@@ -92,9 +92,23 @@ export const orderItemsTable = pgTable("order_items", {
   color: text("color"),
 });
 
+export const reviewsTable = pgTable("reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orderId: uuid("order_id").references(() => ordersTable.id).notNull(),
+  productId: uuid("product_id").references(() => productsTable.id).notNull(),
+  storeId: uuid("store_id").references(() => storesTable.id),
+  telegramId: text("telegram_id"),
+  customerName: text("customer_name").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  images: text("images").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
 export const insertStoreSchema = createInsertSchema(storesTable).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
+export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });
 
 export type Product = typeof productsTable.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
@@ -104,3 +118,5 @@ export type Order = typeof ordersTable.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Category = typeof categoriesTable.$inferSelect;
 export type OrderItem = typeof orderItemsTable.$inferSelect;
+export type Review = typeof reviewsTable.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;

@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useProduct } from "@/hooks/use-api";
-import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck } from "lucide-react";
+import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, MessageSquare } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCartStore } from "@/store/cart-store";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -25,6 +27,19 @@ export default function ProductDetail() {
   const [reviewCount, setReviewCount] = useState<number | null>(null);
 
   const addItem = useCartStore(state => state.addItem);
+
+  // Fetch reviews for this product
+  const { data: reviewsData } = useQuery({
+    queryKey: ["/api/reviews", params?.id],
+    queryFn: async () => {
+      if (!params?.id) return { reviews: [] };
+      const res = await fetch(`/api/reviews?productId=${params.id}`);
+      if (!res.ok) return { reviews: [] };
+      return res.json() as Promise<{ reviews: any[] }>;
+    },
+    enabled: !!params?.id,
+  });
+  const reviews = reviewsData?.reviews ?? [];
 
   const handleRate = async (stars: number) => {
     if (ratingSubmitted || !product) return;
@@ -269,6 +284,82 @@ export default function ProductDetail() {
                 ? ["", "Yomon", "O'rtacha", "Yaxshi", "Juda yaxshi", "A'lo!"][hoverRating]
                 : "Yulduzcha bosing"}
             </p>
+          )}
+        </div>
+
+        {/* ── REVIEWS SECTION ── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              Sharhlar
+              {reviews.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">({reviews.length})</span>
+              )}
+            </h3>
+            {reviews.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="font-bold text-sm">
+                  {(reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {reviews.length === 0 ? (
+            <div className="text-center py-8 bg-secondary/20 rounded-2xl border border-border/40">
+              <Star className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Hali sharhlar yo'q</p>
+              <p className="text-xs text-muted-foreground mt-1">Birinchi sharh qoldiring!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((review: any) => (
+                <div key={review.id} className="bg-card border border-border/50 rounded-2xl p-4">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-primary">
+                          {review.customerName?.[0]?.toUpperCase() || "M"}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{review.customerName}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {format(new Date(review.createdAt), "dd MMM yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {[1,2,3,4,5].map(s => (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "fill-border text-border"}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Comment */}
+                  {review.comment && (
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">{review.comment}</p>
+                  )}
+
+                  {/* Images */}
+                  {review.images && review.images.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {review.images.map((img: string, idx: number) => (
+                        <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-border/40 shrink-0">
+                          <img src={img} alt={`sharh rasmi ${idx + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
