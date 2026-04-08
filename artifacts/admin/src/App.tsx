@@ -18,9 +18,9 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function AdminRouter({ onLogout }: { onLogout: () => void }) {
+function AdminRouter() {
   return (
-    <AdminLayout onLogout={onLogout}>
+    <AdminLayout>
       <Switch>
         <Route path="/"              component={Dashboard}     />
         <Route path="/products"      component={Products}      />
@@ -55,16 +55,11 @@ function AppContent() {
     return localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN;
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem("abz_admin_tg_token");
-    setAuthed(false);
-  };
-
   if (!authed) return <Login onLogin={() => setAuthed(true)} />;
 
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-      <AdminRouter onLogout={handleLogout} />
+      <AdminRouter />
     </WouterRouter>
   );
 }

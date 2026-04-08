@@ -2,8 +2,8 @@ import { ReactNode, useState } from "react";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Store,
-  LayoutGrid, Bell, Search, ChevronDown, LogOut, Menu, X,
-  Settings, CreditCard, Image as ImageIcon, Zap, Crown,
+  LayoutGrid, Bell, Search, ChevronDown, Menu, X,
+  CreditCard, Image as ImageIcon, Zap, Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ function NavItem({ icon: Icon, label, path, collapsed }: any) {
   );
 }
 
-export function AdminLayout({ children, onLogout }: { children: ReactNode; onLogout?: () => void }) {
+export function AdminLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -67,25 +67,6 @@ export function AdminLayout({ children, onLogout }: { children: ReactNode; onLog
           <NavItem key={item.path} {...item} collapsed={collapsed && !mobile} />
         ))}
       </nav>
-
-      {/* Bottom */}
-      <div className="px-2 py-4 border-t border-white/10 space-y-0.5">
-        <div className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-white/55 hover:text-white hover:bg-white/10 transition-all",
-        )}>
-          <Settings className="w-5 h-5 shrink-0" />
-          {(!collapsed || mobile) && <span className="text-sm font-medium">Sozlamalar</span>}
-        </div>
-        <div
-          onClick={onLogout}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer text-white/55 hover:text-red-300 hover:bg-red-500/10 transition-all",
-          )}
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
-          {(!collapsed || mobile) && <span className="text-sm font-medium">Chiqish</span>}
-        </div>
-      </div>
 
       {/* Admin profile */}
       {(!collapsed || mobile) && (
