@@ -885,7 +885,7 @@ export default function Profile() {
   const openAdminPanel = () => {
     hapticFeedback("impact");
     try { localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN); } catch {}
-    window.open("/admin/", "_blank");
+    window.open(`/admin/#t=${ADMIN_TOKEN}`, "_blank");
   };
 
   useEffect(() => {

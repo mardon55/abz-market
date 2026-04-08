@@ -40,7 +40,20 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
 
 function AppContent() {
   const ADMIN_TOKEN = "abz_admin_tg_259875997";
-  const [authed, setAuthed] = useState(() => localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN);
+  const [authed, setAuthed] = useState(() => {
+    // Check URL hash for token (e.g. #t=abz_admin_tg_259875997)
+    try {
+      const hash = window.location.hash;
+      const match = hash.match(/[#&]t=([^&]+)/);
+      if (match && match[1] === ADMIN_TOKEN) {
+        localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN);
+        // Clean hash from URL without reload
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        return true;
+      }
+    } catch {}
+    return localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN;
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("abz_admin_tg_token");
