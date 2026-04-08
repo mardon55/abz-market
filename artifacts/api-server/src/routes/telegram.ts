@@ -1,5 +1,8 @@
 import { Router, type IRouter } from "express";
 import TelegramBot from "node-telegram-bot-api";
+import { db } from "@workspace/db";
+import { usersTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -46,6 +49,39 @@ if (BOT_TOKEN) {
     if (d.ok) console.log("Menu button set to:", MINI_APP_URL);
     else console.error("Failed to set menu button:", d.description);
   }).catch(console.error);
+}
+
+// ── Auto-register/upsert user from Telegram ────────────────────────────────────
+async function upsertTelegramUser(from: {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+}) {
+  try {
+    const tgId = String(from.id);
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.telegramId, tgId));
+    if (existing) {
+      // Update name in case it changed
+      await db.update(usersTable)
+        .set({
+          firstName: from.first_name,
+          lastName: from.last_name ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(usersTable.telegramId, tgId));
+    } else {
+      await db.insert(usersTable).values({
+        telegramId: tgId,
+        firstName: from.first_name,
+        lastName: from.last_name ?? null,
+        avatar: from.photo_url ?? null,
+      });
+    }
+  } catch (err) {
+    console.error("Failed to upsert telegram user:", err);
+  }
 }
 
 function getMainMenuKeyboard() {
@@ -117,6 +153,11 @@ router.post("/telegram/webhook", async (req, res) => {
       const text = msg.text || "";
       const firstName = msg.from?.first_name || "Foydalanuvchi";
 
+      // Always auto-register the user
+      if (msg.from) {
+        await upsertTelegramUser(msg.from);
+      }
+
       if (text === "/start" || text.startsWith("/start")) {
         await bot.sendMessage(
           chatId,
@@ -186,6 +227,11 @@ router.post("/telegram/webhook", async (req, res) => {
     if (update.callback_query) {
       const query = update.callback_query;
       const chatId = query.message?.chat.id;
+
+      // Auto-register user from callback query too
+      if (query.from) {
+        await upsertTelegramUser(query.from);
+      }
 
       if (chatId) {
         if (query.data === "contact") {

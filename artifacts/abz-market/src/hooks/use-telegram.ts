@@ -91,9 +91,23 @@ export function initTelegramOnce() {
     tg.expand();
   }
   // Persist Telegram user ID to localStorage so it's available across sessions/pages
-  const userId = tg.initDataUnsafe?.user?.id;
-  if (userId) {
-    try { localStorage.setItem("tg_user_id", String(userId)); } catch {}
+  const user = tg.initDataUnsafe?.user;
+  if (user?.id) {
+    try { localStorage.setItem("tg_user_id", String(user.id)); } catch {}
+
+    // Auto-register user in DB (fire-and-forget)
+    try {
+      fetch("/api/users/me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId: String(user.id),
+          firstName: user.first_name ?? "Foydalanuvchi",
+          lastName: user.last_name ?? null,
+          avatar: user.photo_url ?? null,
+        }),
+      }).catch(() => {});
+    } catch {}
   }
 }
 

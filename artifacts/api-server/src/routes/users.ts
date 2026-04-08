@@ -1,20 +1,41 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable, addressesTable } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { usersTable, addressesTable, ordersTable } from "@workspace/db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+// GET /api/users — all users with order stats
 router.get("/users", async (req, res) => {
   try {
     const users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
-    res.json({ users });
+
+    // Get order stats per user (group by telegramId)
+    const orderStats = await db
+      .select({
+        telegramId: ordersTable.telegramId,
+        orderCount: sql<number>`COUNT(*)::int`,
+        totalSpent: sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
+      })
+      .from(ordersTable)
+      .groupBy(ordersTable.telegramId);
+
+    const statsMap = new Map(orderStats.map(s => [s.telegramId, s]));
+
+    const enriched = users.map(u => ({
+      ...u,
+      orderCount: u.telegramId ? (statsMap.get(u.telegramId)?.orderCount ?? 0) : 0,
+      totalSpent: u.telegramId ? (statsMap.get(u.telegramId)?.totalSpent ?? 0) : 0,
+    }));
+
+    res.json({ users: enriched });
   } catch (err) {
     req.log.error({ err }, "Error fetching users");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// GET /api/users/:telegramId/addresses
 router.get("/users/:telegramId/addresses", async (req, res) => {
   try {
     const { telegramId } = req.params;
@@ -30,6 +51,7 @@ router.get("/users/:telegramId/addresses", async (req, res) => {
   }
 });
 
+// GET /api/users/me
 router.get("/users/me", async (req, res) => {
   try {
     const tgId = req.query["tgId"] as string;
@@ -44,6 +66,7 @@ router.get("/users/me", async (req, res) => {
   }
 });
 
+// POST /api/users/me — create or update user
 router.post("/users/me", async (req, res) => {
   try {
     const { telegramId, firstName, lastName, phone, avatar } = req.body as Record<string, string>;
