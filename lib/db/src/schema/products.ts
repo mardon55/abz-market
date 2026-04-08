@@ -105,10 +105,34 @@ export const reviewsTable = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const bannersTable = pgTable("banners", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  badge: text("badge"),
+  image: text("image"),
+  gradient: text("gradient").default("from-violet-600 via-purple-600 to-fuchsia-500"),
+  link: text("link").default("/catalog"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const flashSalesTable = pgTable("flash_sales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  isActive: boolean("is_active").default(true),
+  productIds: text("product_ids").array().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true });
 export const insertStoreSchema = createInsertSchema(storesTable).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
 export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });
+export const insertBannerSchema = createInsertSchema(bannersTable).omit({ id: true, createdAt: true });
+export const insertFlashSaleSchema = createInsertSchema(flashSalesTable).omit({ id: true, createdAt: true });
 
 export type Product = typeof productsTable.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
@@ -120,3 +144,5 @@ export type Category = typeof categoriesTable.$inferSelect;
 export type OrderItem = typeof orderItemsTable.$inferSelect;
 export type Review = typeof reviewsTable.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Banner = typeof bannersTable.$inferSelect;
+export type FlashSale = typeof flashSalesTable.$inferSelect;

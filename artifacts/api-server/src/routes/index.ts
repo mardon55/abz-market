@@ -8,6 +8,8 @@ import analyticsRouter from "./analytics";
 import telegramRouter from "./telegram";
 import usersRouter from "./users";
 import reviewsRouter from "./reviews";
+import bannersRouter from "./banners";
+import flashSalesRouter from "./flash-sales";
 
 const router: IRouter = Router();
 
@@ -20,5 +22,7 @@ router.use(analyticsRouter);
 router.use(telegramRouter);
 router.use(usersRouter);
 router.use(reviewsRouter);
+router.use(bannersRouter);
+router.use(flashSalesRouter);
 
 export default router;

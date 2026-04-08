@@ -11,6 +11,8 @@ import Users from "@/pages/users";
 import Stores from "@/pages/stores";
 import Categories from "@/pages/categories";
 import PaymentMethods from "@/pages/payment-methods";
+import Banners from "@/pages/banners";
+import FlashSales from "@/pages/flash-sales";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -19,13 +21,15 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
   return (
     <AdminLayout onLogout={onLogout}>
       <Switch>
-        <Route path="/"           component={Dashboard}  />
-        <Route path="/products"   component={Products}   />
-        <Route path="/orders"     component={Orders}     />
-        <Route path="/users"      component={Users}      />
-        <Route path="/stores"     component={Stores}     />
-        <Route path="/categories"      component={Categories}      />
-        <Route path="/payment-methods" component={PaymentMethods}   />
+        <Route path="/"              component={Dashboard}     />
+        <Route path="/products"      component={Products}      />
+        <Route path="/orders"        component={Orders}        />
+        <Route path="/users"         component={Users}         />
+        <Route path="/stores"        component={Stores}        />
+        <Route path="/categories"    component={Categories}    />
+        <Route path="/payment-methods" component={PaymentMethods} />
+        <Route path="/banners"       component={Banners}       />
+        <Route path="/flash-sales"   component={FlashSales}    />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

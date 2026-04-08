@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useCategories, useProducts } from "@/hooks/use-api";
 import { ProductCard } from "@/components/ui/ProductCard";
@@ -16,34 +17,25 @@ function fmt(n: number) {
   return n.toLocaleString("ru-RU") + " so'm";
 }
 
-// ── Static data ──────────────────────────────────────────────
-const BANNERS = [
+// ── Fallback banners ─────────────────────────────────────────────────────
+const FALLBACK_BANNERS = [
   {
-    id: 1,
+    id: "fb1",
     title: "Yozgi chegirmalar",
     subtitle: "20% GACHA ARZONLASHDI",
     gradient: "from-violet-600 via-purple-600 to-fuchsia-500",
-    img: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
     badge: "🔥 HOT",
-    badge_bg: "bg-white/20",
+    link: "/catalog",
   },
   {
-    id: 2,
+    id: "fb2",
     title: "Yangi kolleksiya",
     subtitle: "PREMIUM OSHXONA MEBELLARI",
     gradient: "from-slate-700 via-slate-600 to-zinc-500",
-    img: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
     badge: "✨ YANGI",
-    badge_bg: "bg-white/20",
-  },
-  {
-    id: 3,
-    title: "Yotoqxona to'plami",
-    subtitle: "BEPUL YETKAZIB BERISH",
-    gradient: "from-rose-500 via-pink-500 to-red-400",
-    img: "https://images.unsplash.com/photo-1505693314120-0d443867891c?w=600&q=80",
-    badge: "🚚 BEPUL",
-    badge_bg: "bg-white/20",
+    link: "/catalog",
   },
 ];
 
@@ -72,15 +64,28 @@ const TRUST = [
   { icon: Percent,     label: "Chegirmalar",    sub: "Har kuni" },
 ];
 
-// ── Banner carousel ───────────────────────────────────────────
-function BannerCarousel({ onNavigate }: { onNavigate: (p: string) => void }) {
+// ── Dynamic Banner Carousel ──────────────────────────────────────────────
+interface BannerItem {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  badge?: string | null;
+  image?: string | null;
+  gradient: string;
+  link: string;
+}
+
+function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavigate: (p: string) => void }) {
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => setActive((p) => (p + 1) % BANNERS.length), 3500);
+    if (banners.length <= 1) return;
+    timerRef.current = setTimeout(() => setActive((p) => (p + 1) % banners.length), 3500);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [active]);
+  }, [active, banners.length]);
+
+  if (banners.length === 0) return null;
 
   return (
     <div className="px-4 mb-5">
@@ -89,16 +94,27 @@ function BannerCarousel({ onNavigate }: { onNavigate: (p: string) => void }) {
           className="flex transition-transform duration-500 ease-out"
           style={{ transform: `translateX(-${active * 100}%)` }}
         >
-          {BANNERS.map((b) => (
-            <div key={b.id} className="flex-none w-full cursor-pointer" onClick={() => onNavigate("/catalog")}>
+          {banners.map((b) => (
+            <div key={b.id} className="flex-none w-full cursor-pointer" onClick={() => onNavigate(b.link || "/catalog")}>
               <div className={cn("relative aspect-[16/8] overflow-hidden bg-gradient-to-br", b.gradient)}>
-                <img src={b.img} alt={b.title} className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay" loading="lazy" />
+                {b.image && (
+                  <img
+                    src={b.image}
+                    alt={b.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay"
+                    loading="lazy"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
-                <span className={cn("absolute top-3 left-3 text-white text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm", b.badge_bg)}>
-                  {b.badge}
-                </span>
+                {b.badge && (
+                  <span className="absolute top-3 left-3 text-white text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+                    {b.badge}
+                  </span>
+                )}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <p className="text-white/65 text-[10px] font-bold uppercase tracking-widest mb-1">{b.subtitle}</p>
+                  {b.subtitle && (
+                    <p className="text-white/65 text-[10px] font-bold uppercase tracking-widest mb-1">{b.subtitle}</p>
+                  )}
                   <h2 className="text-white font-display font-bold text-xl leading-tight mb-3">{b.title}</h2>
                   <span className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-4 py-1.5 rounded-full shadow-ios-sm">
                     Ko'rish <ArrowRight className="w-3 h-3" />
@@ -109,22 +125,123 @@ function BannerCarousel({ onNavigate }: { onNavigate: (p: string) => void }) {
           ))}
         </div>
         {/* Dots */}
-        <div className="absolute bottom-4 right-4 flex gap-1.5">
-          {BANNERS.map((_, i) => (
-            <button
-              key={i}
-              onClick={(e) => { e.stopPropagation(); setActive(i); }}
-              className={cn("h-1.5 rounded-full transition-all duration-300", i === active ? "w-5 bg-white" : "w-1.5 bg-white/45")}
-            />
-          ))}
-        </div>
+        {banners.length > 1 && (
+          <div className="absolute bottom-4 right-4 flex gap-1.5">
+            {banners.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setActive(i); }}
+                className={cn("h-1.5 rounded-full transition-all duration-300", i === active ? "w-5 bg-white" : "w-1.5 bg-white/45")}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Flash sale countdown ──────────────────────────────────────
-function FlashSaleTimer() {
+// ── Dynamic Flash Sale Timer ─────────────────────────────────────────────
+interface FlashSaleData {
+  id: string;
+  title: string;
+  endsAt: string;
+  isActive: boolean;
+  products?: Array<{
+    id: string;
+    name: string;
+    price: string;
+    oldPrice?: string | null;
+    images?: string[] | null;
+    discount?: number | null;
+    rating?: string;
+    reviewCount?: number;
+  }>;
+}
+
+function FlashSaleBlock({ sale, onNavigate }: { sale: FlashSaleData; onNavigate: (p: string) => void }) {
+  const [secs, setSecs] = useState(() =>
+    Math.max(0, Math.floor((new Date(sale.endsAt).getTime() - Date.now()) / 1000))
+  );
+
+  useEffect(() => {
+    if (secs <= 0) return;
+    const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const h   = Math.floor(secs / 3600);
+  const m   = Math.floor((secs % 3600) / 60);
+  const s   = secs % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    <div className="mx-4 mb-5">
+      {/* Timer bar */}
+      <div className="bg-gradient-to-r from-rose-500 via-pink-500 to-red-400 rounded-3xl px-4 py-3.5 flex items-center justify-between shadow-ios-lg shadow-rose-300/40 mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-white/20 rounded-2xl flex items-center justify-center">
+            <Zap className="w-5 h-5 text-yellow-200 fill-yellow-200" />
+          </div>
+          <div>
+            <div className="text-white font-display font-bold text-sm">{sale.title}</div>
+            <div className="text-white/65 text-[10px]">{secs > 0 ? "Chegirma tugaydi" : "Tugadi"}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {[pad(h), pad(m), pad(s)].map((v, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl w-[34px] h-[34px] flex items-center justify-center">
+                <span className="text-white font-display font-extrabold text-base tabular-nums">{v}</span>
+              </div>
+              {i < 2 && <span className="text-white/80 font-bold text-sm leading-none">:</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Flash sale products horizontal scroll */}
+      {sale.products && sale.products.length > 0 && (
+        <div className="flex gap-3 pb-2 overflow-x-auto hide-scrollbar">
+          {sale.products.slice(0, 8).map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onNavigate(`/product/${p.id}`)}
+              className="flex-none w-40 glass-card rounded-3xl overflow-hidden press shadow-ios-sm text-left"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-muted/50">
+                <img
+                  src={p.images?.[0] ?? "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&q=60"}
+                  alt={p.name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {(p.discount ?? 0) > 0 && (
+                  <div className="absolute top-2 left-2 bg-red-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    -{p.discount}%
+                  </div>
+                )}
+                <div className="absolute top-2 right-2 bg-rose-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  <Zap className="w-2.5 h-2.5 inline fill-yellow-200 text-yellow-200" />
+                </div>
+              </div>
+              <div className="p-2.5">
+                <p className="text-[12px] font-semibold line-clamp-2 leading-tight mb-1">{p.name}</p>
+                <div className="text-rose-500 font-bold text-[13px]">{fmt(Number(p.price))}</div>
+                {p.oldPrice && (
+                  <div className="text-muted-foreground text-[11px] line-through">{fmt(Number(p.oldPrice))}</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Fallback static flash sale timer ────────────────────────────────────
+function StaticFlashSaleTimer() {
   const [secs, setSecs] = useState(5 * 3600 + 42 * 60 + 37);
   useEffect(() => {
     const t = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000);
@@ -162,7 +279,7 @@ function FlashSaleTimer() {
   );
 }
 
-// ── Main home page ────────────────────────────────────────────
+// ── Main home page ──────────────────────────────────────────────────────
 export default function Home() {
   const [, navigate] = useLocation();
 
@@ -170,10 +287,34 @@ export default function Home() {
   const { data: featData, isLoading: featLoading } = useProducts({ featured: true });
   const { data: allData,  isLoading: allLoading  } = useProducts();
 
+  // Dynamic banners from API
+  const { data: bannersData } = useQuery<{ banners: BannerItem[] }>({
+    queryKey: ["/api/banners"],
+    queryFn: () => fetch("/api/banners").then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  // Active flash sales from API
+  const { data: flashSalesData } = useQuery<{ flashSales: FlashSaleData[] }>({
+    queryKey: ["/api/flash-sales"],
+    queryFn: () => fetch("/api/flash-sales").then((r) => r.json()),
+    staleTime: 30_000,
+  });
+
   const cats     = catData?.categories ?? [];
   const featured = featData?.products  ?? [];
   const all      = allData?.products   ?? [];
   const newArr   = all.slice(2, 5);
+
+  // Use API banners if available, otherwise fallback
+  const apiBanners  = bannersData?.banners ?? [];
+  const banners     = apiBanners.length > 0 ? apiBanners : FALLBACK_BANNERS;
+
+  // First active, non-expired flash sale
+  const now       = new Date();
+  const flashSale = (flashSalesData?.flashSales ?? []).find(
+    (s) => s.isActive && new Date(s.endsAt) > now
+  ) ?? null;
 
   const goTo = (path: string) => {
     hapticFeedback("selection");
@@ -211,9 +352,9 @@ export default function Home() {
         </button>
       </div>
 
-      {/* ── Banner ── */}
+      {/* ── Dynamic Banner Carousel ── */}
       <div className="pt-2">
-        <BannerCarousel onNavigate={(p) => goTo(p)} />
+        <BannerCarousel banners={banners} onNavigate={goTo} />
       </div>
 
       {/* ── Quick actions ── */}
@@ -263,7 +404,6 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex gap-3 px-4 overflow-x-auto hide-scrollbar pb-1">
-          {/* All */}
           <button onClick={() => goTo("/catalog")} className="flex-none flex flex-col items-center gap-1.5 press">
             <div className="w-[60px] h-[60px] rounded-[22px] bg-primary flex items-center justify-center shadow-ios overflow-hidden">
               <img src="/icons/barchasi.png" alt="Barchasi" className="w-11 h-11 object-contain" />
@@ -286,10 +426,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Flash sale ── */}
-      <FlashSaleTimer />
+      {/* ── Flash Sale (dynamic or static) ── */}
+      {flashSale ? (
+        <FlashSaleBlock sale={flashSale} onNavigate={goTo} />
+      ) : (
+        <StaticFlashSaleTimer />
+      )}
 
-      {/* ── Featured products (horizontal) ── */}
+      {/* ── Featured products ── */}
       <div className="mb-6">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="font-display font-bold text-[17px] flex items-center gap-2">
@@ -329,7 +473,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── New arrivals (list) ── */}
+      {/* ── New arrivals ── */}
       <div className="mb-6">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="font-display font-bold text-[17px] flex items-center gap-2">
