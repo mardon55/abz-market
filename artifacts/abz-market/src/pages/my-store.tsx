@@ -1109,6 +1109,9 @@ export default function MyStore() {
   const [allStores, setAllStores]       = useState<SellerInfo[]>(loadAllStores);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [autoDetecting, setAutoDetecting] = useState(!loadSeller()); // true while resolving
+  const [showTgIdInput, setShowTgIdInput] = useState(false);
+  const [manualTgId, setManualTgId] = useState("");
+  const [tgIdSearching, setTgIdSearching] = useState(false);
 
   const [store, setStore]             = useState<StoreData | null>(null);
   const [products, setProducts]       = useState<Product[]>([]);
@@ -1148,8 +1151,9 @@ export default function MyStore() {
     // No localStorage entry — try to find stores by Telegram ID
     const tgId = getTelegramId();
     if (!tgId) {
+      // No Telegram context — show manual ID input instead of redirect
       setAutoDetecting(false);
-      navigate("/register-store");
+      setShowTgIdInput(true);
       return;
     }
 
@@ -1171,9 +1175,35 @@ export default function MyStore() {
       })
       .catch(() => {
         setAutoDetecting(false);
-        navigate("/register-store");
+        setShowTgIdInput(true);
       });
   }, []);
+
+  const handleManualTgIdSearch = async () => {
+    const id = manualTgId.trim();
+    if (!id) return;
+    setTgIdSearching(true);
+    try {
+      const r = await fetch(`/api/stores?telegramId=${id}`);
+      const d = await r.json();
+      const stores: any[] = d.stores ?? [];
+      if (stores.length === 0) {
+        navigate("/register-store");
+        return;
+      }
+      const entries: SellerInfo[] = stores.map(s => ({ storeId: s.id, storeName: s.name }));
+      try { localStorage.setItem("tg_user_id", id); } catch {}
+      try { localStorage.setItem("abz_stores", JSON.stringify(entries)); } catch {}
+      try { localStorage.setItem("abz_seller", JSON.stringify(entries[0])); } catch {}
+      setAllStores(entries);
+      setActiveSeller(entries[0]);
+      setShowTgIdInput(false);
+    } catch {
+      navigate("/register-store");
+    } finally {
+      setTgIdSearching(false);
+    }
+  };
 
   const switchStore = (s: SellerInfo) => {
     hapticFeedback("selection");
@@ -1203,6 +1233,51 @@ export default function MyStore() {
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
           <p className="text-sm text-muted-foreground font-medium">Do'kon topilmoqda...</p>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  // No Telegram context — let the seller identify themselves via ID
+  if (showTgIdInput) {
+    return (
+      <MobileLayout hideNav={false} title="Do'konim">
+        <div className="flex flex-col items-center justify-center px-6 py-20 gap-6">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-bold font-display text-foreground mb-1">Do'koningizga kirish</h2>
+            <p className="text-sm text-muted-foreground">Telegram ID'ingizni kiriting, do'koningiz avtomatik topiladi</p>
+          </div>
+
+          <div className="w-full space-y-3">
+            <input
+              type="number"
+              value={manualTgId}
+              onChange={e => setManualTgId(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleManualTgIdSearch()}
+              placeholder="Telegram ID (masalan: 123456789)"
+              className="w-full h-12 px-4 rounded-2xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <button
+              onClick={handleManualTgIdSearch}
+              disabled={!manualTgId.trim() || tgIdSearching}
+              className="w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {tgIdSearching ? (
+                <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              ) : "Do'konni topish"}
+            </button>
+            <button
+              onClick={() => navigate("/register-store")}
+              className="w-full h-11 rounded-2xl border border-border text-sm font-medium text-muted-foreground"
+            >
+              Yangi do'kon ochish
+            </button>
+          </div>
         </div>
       </MobileLayout>
     );

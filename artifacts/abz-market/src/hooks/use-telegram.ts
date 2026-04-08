@@ -90,6 +90,11 @@ export function initTelegramOnce() {
   if (tg.initData) {
     tg.expand();
   }
+  // Persist Telegram user ID to localStorage so it's available across sessions/pages
+  const userId = tg.initDataUnsafe?.user?.id;
+  if (userId) {
+    try { localStorage.setItem("tg_user_id", String(userId)); } catch {}
+  }
 }
 
 // Stable haptic function (no hook, no re-render)
