@@ -10,6 +10,7 @@ import usersRouter from "./users";
 import reviewsRouter from "./reviews";
 import bannersRouter from "./banners";
 import flashSalesRouter from "./flash-sales";
+import addressesRouter from "./addresses";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(usersRouter);
 router.use(reviewsRouter);
 router.use(bannersRouter);
 router.use(flashSalesRouter);
+router.use(addressesRouter);
 
 export default router;

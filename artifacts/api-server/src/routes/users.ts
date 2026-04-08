@@ -1,9 +1,34 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { usersTable, addressesTable } from "@workspace/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
+
+router.get("/users", async (req, res) => {
+  try {
+    const users = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
+    res.json({ users });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching users");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/users/:telegramId/addresses", async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const addresses = await db
+      .select()
+      .from(addressesTable)
+      .where(eq(addressesTable.telegramId, telegramId))
+      .orderBy(desc(addressesTable.isDefault), desc(addressesTable.createdAt));
+    res.json({ addresses });
+  } catch (err) {
+    req.log.error({ err }, "Error fetching user addresses");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/users/me", async (req, res) => {
   try {

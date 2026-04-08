@@ -22,6 +22,7 @@ import MyStore from "@/pages/my-store";
 import Favorites from "@/pages/favorites";
 import TopMahsulotlar from "@/pages/top-mahsulotlar";
 import FlashSalePage from "@/pages/flash-sale";
+import Addresses from "@/pages/addresses";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/favorites" component={Favorites} />
       <Route path="/top-mahsulotlar" component={TopMahsulotlar} />
       <Route path="/flash-sale" component={FlashSalePage} />
+      <Route path="/addresses" component={Addresses} />
       <Route component={NotFound} />
     </Switch>
   );

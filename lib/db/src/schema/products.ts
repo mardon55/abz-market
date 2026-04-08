@@ -137,6 +137,17 @@ export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: tr
 export const insertBannerSchema = createInsertSchema(bannersTable).omit({ id: true, createdAt: true });
 export const insertFlashSaleSchema = createInsertSchema(flashSalesTable).omit({ id: true, createdAt: true });
 
+export const addressesTable = pgTable("addresses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  telegramId: text("telegram_id").notNull(),
+  label: text("label").notNull().default("Uy"),
+  address: text("address").notNull(),
+  city: text("city"),
+  region: text("region"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export type Product = typeof productsTable.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Store = typeof storesTable.$inferSelect;
@@ -149,3 +160,4 @@ export type Review = typeof reviewsTable.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Banner = typeof bannersTable.$inferSelect;
 export type FlashSale = typeof flashSalesTable.$inferSelect;
+export type Address = typeof addressesTable.$inferSelect;
