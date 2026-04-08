@@ -40,14 +40,22 @@ const FALLBACK_BANNERS = [
 ];
 
 const CAT_ICONS: Record<string, string> = {
-  Shkaflar:   "/icons/shkaflar.png",
-  Komodlar:   "/icons/komodlar.png",
-  Oshxonalar: "/icons/oshxonalar.png",
-  Yotoqxona:  "/icons/yotoqxona.png",
-  Stollar:    "/icons/stollar.png",
-  Stullar:    "/icons/stullar.png",
-  Divonlar:   "/icons/divonlar.png",
-  Javonlar:   "/icons/javonlar.png",
+  Shkaflar:      "/icons/shkaflar.png",
+  Komodlar:      "/icons/komodlar.png",
+  Oshxonalar:    "/icons/oshxonalar.png",
+  Yotoqxona:     "/icons/yotoqxona.png",
+  Yotoqona:      "/icons/yotoqona.png",
+  Stollar:       "/icons/stollar.png",
+  Stullar:       "/icons/stullar.png",
+  Divonlar:      "/icons/divonlar.png",
+  Javonlar:      "/icons/javonlar.png",
+  "Bola xonasi": "/icons/bola-xonasi.png",
+  Chiroqlar:     "/icons/chiroqlar.png",
+  Gilamlar:      "/icons/gilamlar.png",
+  Karavotlar:    "/icons/karavotlar.png",
+  Kreslo:        "/icons/kreslo.png",
+  Matraslar:     "/icons/matraslar.png",
+  "Ofis mebeli": "/icons/ofis-mebeli.png",
 };
 
 const QUICK_ACTIONS = [

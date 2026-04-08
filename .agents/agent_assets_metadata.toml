@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Sj8Xp2EviROegzwrBz7ey"
+uri = "file://artifacts/abz-market/public/icons/bola-xonasi.png"
+type = "image"
+title = "children room furniture icon"
+
+[[generated]]
+id = "lqFitNxlBkl7LI9agjHLu"
+uri = "file://artifacts/abz-market/public/icons/chiroqlar.png"
+type = "image"
+title = "lamps chandelier icon"
+
+[[generated]]
+id = "IwY2cmGt180vv9bVo8x0H"
+uri = "file://artifacts/abz-market/public/icons/gilamlar.png"
+type = "image"
+title = "carpet rug icon"
+
+[[generated]]
+id = "wWk73bMWZiN3bKd5REyBp"
+uri = "file://artifacts/abz-market/public/icons/karavotlar.png"
+type = "image"
+title = "bed furniture icon"
+
+[[generated]]
+id = "3A444yVOwgZ4Qp-JjUwIQ"
+uri = "file://artifacts/abz-market/public/icons/kreslo.png"
+type = "image"
+title = "armchair icon"
+
+[[generated]]
+id = "k36xSUzdI5Bcwn4PtomBt"
+uri = "file://artifacts/abz-market/public/icons/matraslar.png"
+type = "image"
+title = "mattress icon"
+
+[[generated]]
+id = "_-QWYPPmETYZhjvPd3JJB"
+uri = "file://artifacts/abz-market/public/icons/ofis-mebeli.png"
+type = "image"
+title = "office furniture icon"
+
+[[generated]]
+id = "ILhC-g0eeGa7WphuNn57P"
+uri = "file://artifacts/abz-market/public/icons/yotoqona.png"
+type = "image"
+title = "bedroom furniture icon"
