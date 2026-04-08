@@ -908,8 +908,7 @@ export default function Profile() {
   ];
 
   const settingsItems = [
-    { icon: Settings,   label: "Sozlamalar",    path: "/settings" },
-    { icon: HelpCircle, label: "Yordam markazi", path: "/help" },
+    { icon: HelpCircle, label: "Yordam markazi",  path: "/help" },
     { icon: Bell,       label: "Bildirishnomalar", path: "/notifications" },
   ];
 
