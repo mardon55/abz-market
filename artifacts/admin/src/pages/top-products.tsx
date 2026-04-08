@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Crown, Search, Star, TrendingUp, Plus, X,
-  Package, Image as ImageIcon, CheckCircle2, Flame,
+  Crown, Search, TrendingUp, Plus, X,
+  Package, Image as ImageIcon, CheckCircle2,
+  Flame, Loader2, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +13,6 @@ interface ApiProduct {
   id: string;
   name: string;
   price: string;
-  oldPrice: string | null;
   images: string[] | null;
   storeName: string | null;
   categoryName: string | null;
@@ -25,11 +25,217 @@ interface ApiProduct {
   status: string;
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("ru-RU") + " so'm";
+function fmt(n: number) { return n.toLocaleString("ru-RU") + " so'm"; }
+
+// ── Modal: "Top mahsulotlarni belgilash" ──────────────────────────────────
+function MarkModal({
+  allProducts,
+  mode,           // "featured" | "top"
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  allProducts: ApiProduct[];
+  mode: "featured" | "top";
+  onClose: () => void;
+  onSave: (ids: string[]) => void;
+  isSaving: boolean;
+}) {
+  const field = mode === "featured" ? "isFeatured" : "isTopSelling";
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(allProducts.filter((p) => p[field]).map((p) => p.id))
+  );
+
+  const visible = useMemo(
+    () =>
+      allProducts.filter(
+        (p) =>
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          (p.storeName?.toLowerCase().includes(search.toLowerCase()) ?? false)
+      ),
+    [allProducts, search]
+  );
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const addedCount = [...selected].filter(
+    (id) => !allProducts.find((p) => p.id === id)?.[field]
+  ).length;
+  const removedCount = allProducts.filter((p) => p[field] && !selected.has(p.id)).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <div className="flex items-center gap-2">
+            {mode === "featured" ? (
+              <div className="w-8 h-8 bg-violet-600 rounded-xl flex items-center justify-center">
+                <Crown className="w-4 h-4 text-white" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-rose-500 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" />
+              </div>
+            )}
+            <div>
+              <h2 className="font-bold text-gray-900">
+                {mode === "featured" ? "Featured mahsulotlarni belgilash" : "TOP mahsulotlarni belgilash"}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {mode === "featured"
+                  ? "Bosh sahifada ko'rsatiladigan mahsulotlar"
+                  : "Mahsulot kartochkasida TOP badge ko'rinadigan mahsulotlar"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-6 py-3 border-b shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Mahsulot nomini qidirish..."
+              className="w-full pl-9 pr-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-gray-500">
+              {selected.size} ta tanlangan · {visible.length} ta mahsulot
+            </p>
+            <div className="flex gap-2">
+              {addedCount > 0 && (
+                <span className="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                  +{addedCount} qo'shiladi
+                </span>
+              )}
+              {removedCount > 0 && (
+                <span className="text-[11px] bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full font-medium">
+                  -{removedCount} o'chiriladi
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Product list */}
+        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-1.5">
+          {visible.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">Mahsulot topilmadi</p>
+            </div>
+          ) : (
+            visible.map((p) => {
+              const isSelected = selected.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => toggle(p.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                    isSelected
+                      ? mode === "featured"
+                        ? "bg-violet-50 border-violet-300 shadow-sm"
+                        : "bg-rose-50 border-rose-300 shadow-sm"
+                      : "bg-white border-gray-100 hover:border-gray-300"
+                  )}
+                >
+                  {/* Checkbox */}
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all",
+                      isSelected
+                        ? mode === "featured"
+                          ? "bg-violet-600 border-violet-600"
+                          : "bg-rose-500 border-rose-500"
+                        : "bg-white border-gray-300"
+                    )}
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  </div>
+
+                  {/* Image */}
+                  <div className="w-11 h-11 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="w-4 h-4 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 line-clamp-1">{p.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-bold text-violet-600">{fmt(Number(p.price))}</span>
+                      {p.storeName && (
+                        <span className="text-[10px] text-gray-400">· {p.storeName}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Already marked indicator */}
+                  {p[field] && (
+                    <span className="text-[10px] font-semibold text-gray-400 shrink-0">
+                      belgilangan
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-6 py-4 border-t flex gap-3 shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={() => onSave([...selected])}
+            disabled={isSaving}
+            className={cn(
+              "flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-colors",
+              mode === "featured"
+                ? "bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300"
+                : "bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300"
+            )}
+          >
+            {isSaving ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Saqlanmoqda...</>
+            ) : (
+              <><Check className="w-4 h-4" /> Saqlash ({selected.size} ta)</>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ── Small product card in "belgilangan" grid ──────────────────────────────
+// ── Marked product card ───────────────────────────────────────────────────
 function MarkedCard({
   product,
   badge,
@@ -40,17 +246,14 @@ function MarkedCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      {/* Remove button */}
+    <div className="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
       <button
         onClick={onRemove}
-        className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 active:scale-90 shadow-sm"
-        title="O'chirish"
+        className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 active:scale-90 shadow opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Olib tashlash"
       >
         <X className="w-3 h-3" />
       </button>
-
-      {/* Badge */}
       <div className="absolute top-2 left-2 z-10">
         {badge === "featured" ? (
           <span className="bg-violet-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
@@ -62,8 +265,6 @@ function MarkedCard({
           </span>
         )}
       </div>
-
-      {/* Image */}
       <div className="aspect-square bg-gray-50 overflow-hidden">
         {product.images?.[0] ? (
           <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
@@ -73,12 +274,8 @@ function MarkedCard({
           </div>
         )}
       </div>
-
-      {/* Info */}
       <div className="p-2.5">
-        <p className="font-semibold text-xs text-gray-900 line-clamp-2 leading-tight mb-1">
-          {product.name}
-        </p>
+        <p className="font-semibold text-xs text-gray-900 line-clamp-2 leading-tight mb-1">{product.name}</p>
         <p className="text-xs font-bold text-violet-600">{fmt(Number(product.price))}</p>
         {product.storeName && (
           <p className="text-[10px] text-gray-400 mt-0.5 truncate">{product.storeName}</p>
@@ -88,340 +285,289 @@ function MarkedCard({
   );
 }
 
-// ── Row in "add" list ─────────────────────────────────────────────────────
-function ProductRow({
-  product,
-  onToggleFeatured,
-  onToggleTop,
-}: {
-  product: ApiProduct;
-  onToggleFeatured: () => void;
-  onToggleTop: () => void;
-}) {
+// ── Main page ─────────────────────────────────────────────────────────────
+export default function TopProductsPage() {
+  const qc = useQueryClient();
+  const [modal, setModal] = useState<"featured" | "top" | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+  const showToast = (msg: string, type: "ok" | "err" = "ok") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const { data, isLoading } = useQuery<{ products: ApiProduct[] }>({
+    queryKey: ["products-top-admin"],
+    queryFn: () => fetch(`${BASE}/products?status=all&limit=500`).then((r) => r.json()),
+    refetchInterval: 10_000,
+  });
+
+  const allProducts = data?.products ?? [];
+  const featuredProducts = allProducts.filter((p) => p.isFeatured);
+  const topOnlyProducts  = allProducts.filter((p) => p.isTopSelling && !p.isFeatured);
+  const topAllProducts   = allProducts.filter((p) => p.isTopSelling);
+
+  // Single toggle (remove one card)
+  const removeMut = useMutation({
+    mutationFn: async ({ id, field }: { id: string; field: "isFeatured" | "isTopSelling" }) => {
+      const r = await fetch(`${BASE}/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: false }),
+      });
+      if (!r.ok) throw new Error("Xato");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products-top-admin"] });
+      showToast("Olib tashlandi");
+    },
+    onError: () => showToast("Xato yuz berdi", "err"),
+  });
+
+  // Batch save from modal
+  const batchMut = useMutation({
+    mutationFn: async ({
+      selectedIds,
+      field,
+    }: {
+      selectedIds: string[];
+      field: "isFeatured" | "isTopSelling";
+    }) => {
+      const current = new Set(
+        allProducts.filter((p) => p[field]).map((p) => p.id)
+      );
+      const toAdd    = selectedIds.filter((id) => !current.has(id));
+      const toRemove = [...current].filter((id) => !selectedIds.includes(id));
+
+      await Promise.all([
+        ...toAdd.map((id) =>
+          fetch(`${BASE}/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ [field]: true }),
+          })
+        ),
+        ...toRemove.map((id) =>
+          fetch(`${BASE}/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ [field]: false }),
+          })
+        ),
+      ]);
+    },
+    onSuccess: (_, { selectedIds, field }) => {
+      qc.invalidateQueries({ queryKey: ["products-top-admin"] });
+      setModal(null);
+      const label = field === "isFeatured" ? "Featured" : "TOP";
+      showToast(`${label} mahsulotlar saqlandi (${selectedIds.length} ta)`);
+    },
+    onError: () => showToast("Xato yuz berdi", "err"),
+  });
+
   return (
-    <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl px-3 py-2.5 hover:shadow-sm transition-shadow">
-      {/* Image */}
-      <div className="w-11 h-11 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-        {product.images?.[0] ? (
-          <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Crown className="w-6 h-6 text-violet-600" /> Top Mahsulotlar
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Mijozlarga ko'rsatiladigan mahsulotlarni belgilang
+          </p>
+        </div>
+      </div>
+
+      {/* ── CTA buttons ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Featured belgilash */}
+        <button
+          onClick={() => setModal("featured")}
+          className="flex items-center gap-3 bg-violet-600 hover:bg-violet-700 active:scale-[0.98] text-white rounded-2xl px-5 py-4 transition-all shadow-md shadow-violet-200"
+        >
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <Crown className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <p className="font-bold text-sm leading-tight">Featured belgilash</p>
+            <p className="text-white/70 text-xs mt-0.5">
+              {featuredProducts.length} ta belgilangan
+            </p>
+          </div>
+          <Plus className="w-5 h-5 ml-auto shrink-0" />
+        </button>
+
+        {/* TOP belgilash */}
+        <button
+          onClick={() => setModal("top")}
+          className="flex items-center gap-3 bg-rose-500 hover:bg-rose-600 active:scale-[0.98] text-white rounded-2xl px-5 py-4 transition-all shadow-md shadow-rose-200"
+        >
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <Flame className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <p className="font-bold text-sm leading-tight">TOP belgilash</p>
+            <p className="text-white/70 text-xs mt-0.5">
+              {topAllProducts.length} ta belgilangan
+            </p>
+          </div>
+          <Plus className="w-5 h-5 ml-auto shrink-0" />
+        </button>
+      </div>
+
+      {/* ── Featured section ── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 bg-violet-600 rounded-lg flex items-center justify-center">
+            <Crown className="w-3.5 h-3.5 text-white" />
+          </div>
+          <h3 className="font-bold text-gray-800">Featured mahsulotlar</h3>
+          <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium ml-1">
+            {featuredProducts.length} ta
+          </span>
+          <button
+            onClick={() => setModal("featured")}
+            className="ml-auto text-xs text-violet-600 hover:text-violet-800 font-semibold flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Tahrirlash
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-[3/4] bg-gray-100 animate-pulse rounded-2xl" />
+            ))}
+          </div>
+        ) : featuredProducts.length === 0 ? (
+          <div
+            onClick={() => setModal("featured")}
+            className="flex flex-col items-center justify-center py-10 bg-violet-50 rounded-2xl border-2 border-dashed border-violet-200 cursor-pointer hover:bg-violet-100 transition-colors"
+          >
+            <Crown className="w-8 h-8 text-violet-300 mb-2" />
+            <p className="font-semibold text-violet-400 text-sm">Featured mahsulot yo'q</p>
+            <p className="text-xs text-violet-300 mt-0.5">Belgilash uchun bosing</p>
+          </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-4 h-4 text-gray-300" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {featuredProducts.map((p) => (
+              <MarkedCard
+                key={p.id}
+                product={p}
+                badge="featured"
+                onRemove={() => removeMut.mutate({ id: p.id, field: "isFeatured" })}
+              />
+            ))}
+            {/* Add more card */}
+            <button
+              onClick={() => setModal("featured")}
+              className="aspect-[3/4] border-2 border-dashed border-violet-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-violet-50 transition-colors text-violet-400"
+            >
+              <Plus className="w-6 h-6" />
+              <span className="text-xs font-semibold">Qo'shish</span>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-gray-900 line-clamp-1">{product.name}</p>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          <span className="text-xs font-bold text-violet-600">{fmt(Number(product.price))}</span>
-          {product.storeName && (
-            <span className="text-[10px] text-gray-400">· {product.storeName}</span>
-          )}
-          <div className="flex items-center gap-0.5 ml-auto">
-            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-            <span className="text-[10px] text-gray-500">{product.rating}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Toggle buttons */}
-      <div className="flex gap-1.5 shrink-0">
-        <button
-          onClick={onToggleFeatured}
-          title={product.isFeatured ? "Featured dan olib tashlash" : "Featured qo'shish"}
-          className={cn(
-            "w-8 h-8 rounded-xl flex items-center justify-center transition-all border",
-            product.isFeatured
-              ? "bg-violet-600 text-white border-violet-600 shadow-sm"
-              : "bg-gray-50 text-gray-400 border-gray-200 hover:border-violet-400 hover:text-violet-500"
-          )}
-        >
-          <Crown className="w-4 h-4" />
-        </button>
-        <button
-          onClick={onToggleTop}
-          title={product.isTopSelling ? "TOP dan olib tashlash" : "TOP qo'shish"}
-          className={cn(
-            "w-8 h-8 rounded-xl flex items-center justify-center transition-all border",
-            product.isTopSelling
-              ? "bg-rose-500 text-white border-rose-500 shadow-sm"
-              : "bg-gray-50 text-gray-400 border-gray-200 hover:border-rose-400 hover:text-rose-500"
-          )}
-        >
-          <TrendingUp className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Main page ─────────────────────────────────────────────────────────────
-export default function TopProductsPage() {
-  const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"marked" | "all">("marked");
-
-  const { data, isLoading } = useQuery<{ products: ApiProduct[] }>({
-    queryKey: ["products-top-admin"],
-    queryFn: () =>
-      fetch(`${BASE}/products?status=all&limit=500`).then((r) => r.json()),
-    refetchInterval: 10_000,
-  });
-
-  const updateMut = useMutation({
-    mutationFn: async ({
-      id,
-      updates,
-    }: {
-      id: string;
-      updates: Record<string, boolean>;
-    }) => {
-      const r = await fetch(`${BASE}/products/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        throw new Error((err as any).error || "Server xatosi");
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products-top-admin"] }),
-  });
-
-  const allProducts = data?.products ?? [];
-
-  // Marked groups
-  const featuredProducts  = allProducts.filter((p) => p.isFeatured);
-  const topOnlyProducts   = allProducts.filter((p) => p.isTopSelling && !p.isFeatured);
-  const anyMarked         = featuredProducts.length > 0 || topOnlyProducts.length > 0;
-
-  // "All products" search
-  const filtered = allProducts.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.storeName?.toLowerCase().includes(search.toLowerCase()) ?? false)
-  );
-
-  const toggle = (id: string, field: "isFeatured" | "isTopSelling", current: boolean) =>
-    updateMut.mutate({ id, updates: { [field]: !current } });
-
-  return (
-    <div className="space-y-5">
-      {/* Header */}
+      {/* ── TOP section ── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Crown className="w-6 h-6 text-violet-600" /> Top Mahsulotlar
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Mijozlarga ko'rsatiladigan featured va TOP mahsulotlarni belgilang
-        </p>
-      </div>
-
-      {/* Legend cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Crown className="w-5 h-5 text-violet-600" />
-            <p className="font-bold text-violet-900">Featured</p>
-            <span className="ml-auto text-xs font-bold bg-violet-600 text-white px-2 py-0.5 rounded-full">
-              {featuredProducts.length}
-            </span>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 bg-rose-500 rounded-lg flex items-center justify-center">
+            <TrendingUp className="w-3.5 h-3.5 text-white" />
           </div>
-          <p className="text-xs text-violet-700">
-            Bosh sahifada "Top mahsulotlar" bo'limida chiqadi
-          </p>
+          <h3 className="font-bold text-gray-800">TOP badge mahsulotlar</h3>
+          <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full font-medium ml-1">
+            {topAllProducts.length} ta
+          </span>
+          <button
+            onClick={() => setModal("top")}
+            className="ml-auto text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Tahrirlash
+          </button>
         </div>
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Flame className="w-5 h-5 text-rose-500" />
-            <p className="font-bold text-rose-900">TOP badge</p>
-            <span className="ml-auto text-xs font-bold bg-rose-500 text-white px-2 py-0.5 rounded-full">
-              {allProducts.filter((p) => p.isTopSelling).length}
-            </span>
+
+        {isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="aspect-[3/4] bg-gray-100 animate-pulse rounded-2xl" />
+            ))}
           </div>
-          <p className="text-xs text-rose-700">
-            Mahsulot kartochkasida qizil "TOP" badge ko'rsatiladi
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
-        <button
-          onClick={() => setTab("marked")}
-          className={cn(
-            "flex-1 py-2 rounded-lg text-sm font-semibold transition-all",
-            tab === "marked"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
-          )}
-        >
-          Belgilangan ({featuredProducts.length + topOnlyProducts.length})
-        </button>
-        <button
-          onClick={() => setTab("all")}
-          className={cn(
-            "flex-1 py-2 rounded-lg text-sm font-semibold transition-all",
-            tab === "all"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
-          )}
-        >
-          <Plus className="w-4 h-4 inline mr-1" />
-          Mahsulot qo'shish
-        </button>
-      </div>
-
-      {/* TAB: Belgilangan */}
-      {tab === "marked" && (
-        <div className="space-y-5">
-          {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-[3/4] bg-gray-100 animate-pulse rounded-2xl" />
-              ))}
-            </div>
-          ) : !anyMarked ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-              <Crown className="w-10 h-10 text-gray-300 mb-3" />
-              <p className="font-semibold text-gray-500 text-base">Hech narsa belgilanmagan</p>
-              <p className="text-sm text-gray-400 mt-1 text-center max-w-xs">
-                "Mahsulot qo'shish" bo'limiga o'tib, Featured yoki TOP belgilang
-              </p>
-              <button
-                onClick={() => setTab("all")}
-                className="mt-4 flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Mahsulot qo'shish
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Featured */}
-              {featuredProducts.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-violet-600 rounded-lg flex items-center justify-center">
-                      <Crown className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <h3 className="font-bold text-gray-800">Featured mahsulotlar</h3>
-                    <span className="text-xs text-gray-500">{featuredProducts.length} ta</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {featuredProducts.map((p) => (
-                      <MarkedCard
-                        key={p.id}
-                        product={p}
-                        badge="featured"
-                        onRemove={() => toggle(p.id, "isFeatured", true)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TOP only */}
-              {topOnlyProducts.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-rose-500 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <h3 className="font-bold text-gray-800">TOP badge mahsulotlar</h3>
-                    <span className="text-xs text-gray-500">{topOnlyProducts.length} ta</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {topOnlyProducts.map((p) => (
-                      <MarkedCard
-                        key={p.id}
-                        product={p}
-                        badge="top"
-                        onRemove={() => toggle(p.id, "isTopSelling", true)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* TAB: Add products */}
-      {tab === "all" && (
-        <div className="space-y-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Mahsulot nomini qidirish..."
-              className="w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-            />
+        ) : topAllProducts.length === 0 ? (
+          <div
+            onClick={() => setModal("top")}
+            className="flex flex-col items-center justify-center py-10 bg-rose-50 rounded-2xl border-2 border-dashed border-rose-200 cursor-pointer hover:bg-rose-100 transition-colors"
+          >
+            <Flame className="w-8 h-8 text-rose-300 mb-2" />
+            <p className="font-semibold text-rose-400 text-sm">TOP mahsulot yo'q</p>
+            <p className="text-xs text-rose-300 mt-0.5">Belgilash uchun bosing</p>
           </div>
-
-          {/* Legend */}
-          <div className="flex items-center gap-3 text-xs text-gray-500 px-1">
-            <div className="flex items-center gap-1">
-              <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center">
-                <Crown className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span>= Featured (bosh sahifada)</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-7 h-7 bg-rose-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span>= TOP badge</span>
-            </div>
-          </div>
-
-          {/* Stat */}
-          <p className="text-xs text-gray-400 px-1">
-            {filtered.length} ta mahsulot
-            {search ? ` • "${search}" uchun` : ""}
-          </p>
-
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-xl" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-2xl">
-              <Package className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Mahsulot topilmadi</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filtered.map((p) => (
-                <ProductRow
-                  key={p.id}
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {topOnlyProducts.map((p) => (
+              <MarkedCard
+                key={p.id}
+                product={p}
+                badge="top"
+                onRemove={() => removeMut.mutate({ id: p.id, field: "isTopSelling" })}
+              />
+            ))}
+            {/* Both featured+top — show with featured badge */}
+            {featuredProducts
+              .filter((p) => p.isTopSelling)
+              .map((p) => (
+                <MarkedCard
+                  key={p.id + "-top"}
                   product={p}
-                  onToggleFeatured={() => toggle(p.id, "isFeatured", p.isFeatured)}
-                  onToggleTop={() => toggle(p.id, "isTopSelling", p.isTopSelling)}
+                  badge="top"
+                  onRemove={() => removeMut.mutate({ id: p.id, field: "isTopSelling" })}
                 />
               ))}
-            </div>
+            <button
+              onClick={() => setModal("top")}
+              className="aspect-[3/4] border-2 border-dashed border-rose-200 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-rose-50 transition-colors text-rose-400"
+            >
+              <Plus className="w-6 h-6" />
+              <span className="text-xs font-semibold">Qo'shish</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Modal ── */}
+      {modal && (
+        <MarkModal
+          allProducts={allProducts}
+          mode={modal}
+          onClose={() => setModal(null)}
+          isSaving={batchMut.isPending}
+          onSave={(ids) =>
+            batchMut.mutate({
+              selectedIds: ids,
+              field: modal === "featured" ? "isFeatured" : "isTopSelling",
+            })
+          }
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={cn(
+            "fixed bottom-6 right-6 px-4 py-3 rounded-2xl shadow-lg text-sm font-semibold flex items-center gap-2 z-[60] transition-all",
+            toast.type === "ok"
+              ? "bg-emerald-500 text-white"
+              : "bg-red-500 text-white"
           )}
-        </div>
-      )}
-
-      {/* Mutation error toast */}
-      {updateMut.isError && (
-        <div className="fixed bottom-6 right-6 bg-red-500 text-white px-4 py-3 rounded-2xl shadow-lg text-sm font-semibold">
-          Xato: {(updateMut.error as Error).message}
-        </div>
-      )}
-
-      {/* Success toast */}
-      {updateMut.isSuccess && (
-        <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-4 py-3 rounded-2xl shadow-lg text-sm font-semibold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" /> Saqlandi!
+        >
+          {toast.type === "ok" ? (
+            <CheckCircle2 className="w-4 h-4" />
+          ) : (
+            <X className="w-4 h-4" />
+          )}
+          {toast.msg}
         </div>
       )}
     </div>
