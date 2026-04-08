@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Store, ShieldOff, Key, Eye, EyeOff } from "lucide-react";
 
-const ADMIN_TOKEN = "abz_admin_tg_6271849608";
-const ADMIN_ID = "6271849608";
+const ADMIN_TOKEN = "abz_admin_tg_259875997";
+const ADMIN_ID = "259875997";
 
 interface Props {
   onLogin: () => void;

@@ -39,7 +39,7 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
 }
 
 function AppContent() {
-  const ADMIN_TOKEN = "abz_admin_tg_6271849608";
+  const ADMIN_TOKEN = "abz_admin_tg_259875997";
   const [authed, setAuthed] = useState(() => localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN);
 
   const handleLogout = () => {

@@ -20,7 +20,7 @@ function loadSellerInfo(): SellerInfo | null {
   } catch { return null; }
 }
 
-const ADMIN_TG_ID = 6271849608;
+const ADMIN_TG_ID = 259875997;
 const ADMIN_TOKEN = "abz_admin_tg_" + ADMIN_TG_ID;
 
 // ── Storage helpers ───────────────────────────────────────────
