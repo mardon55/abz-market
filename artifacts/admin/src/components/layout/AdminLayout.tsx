@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Store,
   LayoutGrid, Bell, Search, ChevronDown, LogOut, Menu, X,
-  Settings, CreditCard, Image as ImageIcon, Zap,
+  Settings, CreditCard, Image as ImageIcon, Zap, Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ const NAV = [
   { icon: Store,           label: "Do'konlar",        path: "/stores" },
   { icon: LayoutGrid,      label: "Kategoriyalar",    path: "/categories" },
   { icon: CreditCard,      label: "To'lov usullari",  path: "/payment-methods" },
+  { icon: Crown,           label: "Top Mahsulotlar",  path: "/top-products" },
   { icon: ImageIcon,       label: "Bannerlar",        path: "/banners" },
   { icon: Zap,             label: "Flash Sale",       path: "/flash-sales" },
 ];

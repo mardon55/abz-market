@@ -13,6 +13,7 @@ import Categories from "@/pages/categories";
 import PaymentMethods from "@/pages/payment-methods";
 import Banners from "@/pages/banners";
 import FlashSales from "@/pages/flash-sales";
+import TopProducts from "@/pages/top-products";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ function AdminRouter({ onLogout }: { onLogout: () => void }) {
         <Route path="/payment-methods" component={PaymentMethods} />
         <Route path="/banners"       component={Banners}       />
         <Route path="/flash-sales"   component={FlashSales}    />
+        <Route path="/top-products"  component={TopProducts}   />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

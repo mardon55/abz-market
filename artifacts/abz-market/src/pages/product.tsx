@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useProduct } from "@/hooks/use-api";
 import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, MessageSquare } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { useFavoritesStore } from "@/store/favorites-store";
+import { formatPrice, cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCartStore } from "@/store/cart-store";
 import { toast } from "@/hooks/use-toast";
@@ -27,6 +28,8 @@ export default function ProductDetail() {
   const [reviewCount, setReviewCount] = useState<number | null>(null);
 
   const addItem = useCartStore(state => state.addItem);
+  const { toggle: toggleFav, isFavorite } = useFavoritesStore();
+  const fav = product ? isFavorite(product.id) : false;
 
   // Fetch reviews for this product
   const { data: reviewsData } = useQuery({
@@ -101,8 +104,23 @@ export default function ProductDetail() {
         <button className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white active:scale-95">
           <Share2 className="w-4 h-4" />
         </button>
-        <button className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white active:scale-95">
-          <Heart className="w-4 h-4" />
+        <button
+          onClick={() => {
+            if (product) {
+              toggleFav(product.id);
+              toast({
+                title: fav ? "Sevimlilardan olib tashlandi" : "❤️ Sevimlilarga qo'shildi",
+                description: product.name,
+                duration: 1500,
+              });
+            }
+          }}
+          className={cn(
+            "w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center active:scale-95 transition-colors",
+            fav ? "bg-red-500 text-white" : "bg-black/20 text-white"
+          )}
+        >
+          <Heart className={cn("w-4 h-4", fav && "fill-white")} />
         </button>
       </div>
     }>

@@ -19,6 +19,7 @@ import Stores from "@/pages/stores";
 import StoreProfile from "@/pages/store-profile";
 import RegisterStore from "@/pages/register-store";
 import MyStore from "@/pages/my-store";
+import Favorites from "@/pages/favorites";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -46,7 +47,7 @@ function Router() {
       <Route path="/store/:id" component={StoreProfile} />
       <Route path="/register-store" component={RegisterStore} />
       <Route path="/my-store" component={MyStore} />
-      <Route path="/favorites"><Redirect to="/catalog" /></Route>
+      <Route path="/favorites" component={Favorites} />
       <Route component={NotFound} />
     </Switch>
   );
