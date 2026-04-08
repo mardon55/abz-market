@@ -332,7 +332,7 @@ export default function Home() {
           <h1 className="font-display font-extrabold text-[22px] text-gradient tracking-tight leading-none">
             ABZ Market
           </h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Mebel bozori cho'ntagingizda</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Onlayn bozor cho'ntagingizda</p>
         </div>
         <button
           onClick={() => hapticFeedback("impact")}
