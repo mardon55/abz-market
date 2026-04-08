@@ -1233,10 +1233,30 @@ export default function MyStore() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-display font-bold text-white text-lg leading-tight truncate">{seller.storeName}</h2>
-              <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full" />
-                <span className="text-white/80 text-xs font-semibold">Faol do'kon</span>
-              </div>
+              {/* Dynamic status indicator */}
+              {store ? (
+                store.type === "partner" ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full" />
+                    <span className="text-white/80 text-xs font-semibold">Tasdiqlangan ✓</span>
+                  </div>
+                ) : store.type === "rejected" ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-2 h-2 bg-red-400 rounded-full" />
+                    <span className="text-white/80 text-xs font-semibold">Rad etildi ✗</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                    <span className="text-white/80 text-xs font-semibold">Ko'rib chiqilmoqda...</span>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="w-2 h-2 bg-white/40 rounded-full animate-pulse" />
+                  <span className="text-white/60 text-xs">Yuklanmoqda...</span>
+                </div>
+              )}
               {store?.location && <p className="text-white/60 text-xs mt-0.5 truncate">{store.location}</p>}
             </div>
             <button
@@ -1260,6 +1280,51 @@ export default function MyStore() {
             ))}
           </div>
         </div>
+
+        {/* Pending notice */}
+        {store && store.type !== "partner" && store.type !== "rejected" && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Do'koningiz ko'rib chiqilmoqda</p>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                Admin tasdiqlashini kuting. Shu vaqt ichida mahsulotlar qo'shishingiz mumkin — ular ham tasdiqlangandan so'ng ko'rinadi.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Rejected notice */}
+        {store && store.type === "rejected" && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+              <XCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-red-800 text-sm">Do'kon arizasi rad etildi</p>
+              <p className="text-xs text-red-700 mt-0.5 leading-relaxed">
+                Do'koningiz arizada muammo borligi sababli rad etildi. Batafsil ma'lumot uchun admin bilan bog'laning.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Approved notice (shown only once — first approval) */}
+        {store && store.type === "partner" && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-emerald-800 text-sm">Do'koningiz faoliyatda! 🎉</p>
+              <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+                Do'koningiz tasdiqlandi va xaridorlarga ko'rinmoqda. Mahsulot qo'shing va savdoni boshlang!
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Add button */}
         <button onClick={() => { hapticFeedback("impact"); setShowAdd(true); }}
