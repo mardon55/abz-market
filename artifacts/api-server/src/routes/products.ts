@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { productsTable, categoriesTable, storesTable } from "@workspace/db/schema";
-import { eq, ilike, gte, lte, and, desc, sql } from "drizzle-orm";
+import { eq, ilike, gte, lte, and, desc, sql, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -54,7 +54,28 @@ router.get("/products", async (req, res) => {
       conditions.push(eq(productsTable.status, "approved"));
     }
 
-    if (categoryId) conditions.push(eq(productsTable.categoryId, categoryId));
+    if (categoryId) {
+      // Check if this is a parent category — if so, include all subcategory products too
+      const catRow = await db
+        .select({ parentId: categoriesTable.parentId })
+        .from(categoriesTable)
+        .where(eq(categoriesTable.id, categoryId))
+        .limit(1);
+
+      if (catRow.length > 0 && catRow[0].parentId === null) {
+        // It's a parent: get all child IDs
+        const subs = await db
+          .select({ id: categoriesTable.id })
+          .from(categoriesTable)
+          .where(eq(categoriesTable.parentId, categoryId));
+
+        const allIds = [categoryId, ...subs.map((s) => s.id)];
+        conditions.push(inArray(productsTable.categoryId, allIds));
+      } else {
+        // It's a subcategory or unknown: filter directly
+        conditions.push(eq(productsTable.categoryId, categoryId));
+      }
+    }
     if (storeId) conditions.push(eq(productsTable.storeId, storeId));
     if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
     if (minPrice) conditions.push(gte(productsTable.price, minPrice));
