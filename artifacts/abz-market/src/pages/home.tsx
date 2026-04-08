@@ -51,7 +51,7 @@ const CAT_ICONS: Record<string, string> = {
 };
 
 const QUICK_ACTIONS = [
-  { img: "/icons/flash.png",    label: "Flash sale",   path: "/catalog",              bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
+  { img: "/icons/flash.png",    label: "Flash sale",   path: "/flash-sale",           bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
   { img: "/icons/flame.png",    label: "Top mahsulot", path: "/top-mahsulotlar", bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
   { img: "/icons/yangilar.png", label: "Yangilar",     path: "/catalog",              bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
   { img: "/icons/dokonlar.png", label: "Do'konlar",    path: "/stores",               bg: "from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40" },
@@ -284,27 +284,29 @@ export default function Home() {
   const [, navigate] = useLocation();
 
   const { data: catData,  isLoading: catLoading  } = useCategories();
-  const { data: featData, isLoading: featLoading } = useProducts({ featured: true });
-  const { data: allData,  isLoading: allLoading  } = useProducts();
+  const { data: allData,  isLoading: allLoading  } = useProducts({ limit: 200 } as any);
 
   // Dynamic banners from API
   const { data: bannersData } = useQuery<{ banners: BannerItem[] }>({
     queryKey: ["/api/banners"],
     queryFn: () => fetch("/api/banners").then((r) => r.json()),
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 15_000,
   });
 
   // Active flash sales from API
   const { data: flashSalesData } = useQuery<{ flashSales: FlashSaleData[] }>({
     queryKey: ["/api/flash-sales"],
     queryFn: () => fetch("/api/flash-sales").then((r) => r.json()),
-    staleTime: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 15_000,
   });
 
   const cats     = catData?.categories ?? [];
-  const featured = featData?.products  ?? [];
   const all      = allData?.products   ?? [];
-  const newArr   = all.slice(2, 5);
+  // Top section: isFeatured OR isTopSelling
+  const featured = all.filter((p) => p.isFeatured || p.isTopSelling);
+  const newArr   = all.slice(0, 5);
 
   // Use API banners if available, otherwise fallback
   const apiBanners  = bannersData?.banners ?? [];
@@ -444,7 +446,7 @@ export default function Home() {
           </Link>
         </div>
         <div className="flex gap-3 px-4 pb-2 overflow-x-auto hide-scrollbar">
-          {featLoading
+          {allLoading
             ? [1,2,3].map((i) => <Skeleton key={i} className="flex-none w-44 h-60 rounded-3xl" />)
             : featured.slice(0, 6).map((p) => (
                 <button

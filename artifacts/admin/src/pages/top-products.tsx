@@ -116,18 +116,21 @@ export default function TopProductsPage() {
 
   const { data, isLoading } = useQuery<{ products: ApiProduct[] }>({
     queryKey: ["products-top-admin"],
-    queryFn: () => fetch(`${BASE}/products?status=approved&limit=200`).then((r) => r.json()),
+    queryFn: () => fetch(`${BASE}/products?status=all&limit=500`).then((r) => r.json()),
     refetchInterval: 15_000,
   });
 
   const updateMut = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, boolean> }) => {
       const r = await fetch(`${BASE}/products/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-      if (!r.ok) throw new Error("Xato");
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error((err as any).error || "Xato");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products-top-admin"] }),
   });
