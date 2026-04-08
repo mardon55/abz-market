@@ -18,6 +18,8 @@ export const categoriesTable = pgTable("categories", {
   name: text("name").notNull(),
   icon: text("icon"),
   productCount: integer("product_count").default(0),
+  parentId: uuid("parent_id"),
+  sortOrder: integer("sort_order").default(0),
 });
 
 export const storesTable = pgTable("stores", {
