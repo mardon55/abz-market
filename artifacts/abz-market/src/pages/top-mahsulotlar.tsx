@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Flame, TrendingUp, Package, Crown } from "lucide-react";
 
 export default function TopMahsulotlar() {
-  const { data, isLoading } = useProducts({ limit: 200 });
+  const { data, isLoading } = useProducts({ limit: 500 } as any);
   const products = data?.products ?? [];
 
   const featured   = products.filter((p) => p.isFeatured);
