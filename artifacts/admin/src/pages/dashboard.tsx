@@ -6,9 +6,100 @@ import {
 } from "recharts";
 import {
   Package, ShoppingCart, Users, Store, TrendingUp, TrendingDown,
-  DollarSign, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw,
+  DollarSign, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Send, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ── Broadcast notification panel ─────────────────────────────
+function BroadcastPanel() {
+  const [title, setTitle]     = useState("");
+  const [body, setBody]       = useState("");
+  const [telegramId, setTid]  = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent]       = useState(false);
+
+  const send = async () => {
+    if (!title.trim() || !body.trim()) return;
+    setSending(true);
+    try {
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          body: body.trim(),
+          type: "announcement",
+          telegramId: telegramId.trim() || null,
+        }),
+      });
+      setTitle(""); setBody(""); setTid("");
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border/60 rounded-2xl p-5 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center">
+          <Megaphone className="w-4 h-4 text-violet-600" />
+        </div>
+        <div>
+          <h3 className="font-bold text-sm">Bildirishnoma yuborish</h3>
+          <p className="text-[11px] text-muted-foreground">Foydalanuvchilarga xabar yuboring</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Sarlavha *</label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Masalan: Yangi aksiya boshlandi!"
+            className="w-full px-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Xabar matni *</label>
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            rows={2}
+            placeholder="Batafsil ma'lumot..."
+            className="w-full px-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
+            Telegram ID <span className="text-muted-foreground/60 font-normal">(bo'sh qoldiring = barchaga)</span>
+          </label>
+          <input
+            value={telegramId}
+            onChange={e => setTid(e.target.value)}
+            placeholder="Shaxsiy yuborish uchun ID kiriting"
+            className="w-full px-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <button
+          onClick={send}
+          disabled={sending || !title.trim() || !body.trim()}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+            sent
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          )}
+        >
+          <Send className="w-4 h-4" />
+          {sending ? "Yuborilmoqda..." : sent ? "Yuborildi ✓" : "Yuborish"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type Period = "today" | "week" | "month" | "year";
 
@@ -124,6 +215,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Broadcast notification */}
+      <BroadcastPanel />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

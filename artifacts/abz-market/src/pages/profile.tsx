@@ -87,25 +87,37 @@ function formatPhone(raw: string) {
 }
 
 // ── Menu section ─────────────────────────────────────────────
-const MenuSection = ({ items, title }: { items: { icon: any; label: string; path: string }[]; title?: string }) => (
+const MenuSection = ({ items, title, badges }: {
+  items: { icon: any; label: string; path: string }[];
+  title?: string;
+  badges?: Record<string, number>;
+}) => (
   <div className="mb-5">
     {title && (
       <h3 className="px-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{title}</h3>
     )}
     <div className="mx-4 glass-card rounded-3xl overflow-hidden shadow-ios-sm">
-      {items.map((item, i) => (
-        <Link
-          key={i}
-          href={item.path}
-          className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30 last:border-0"
-        >
-          <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <item.icon className="w-4 h-4 text-primary" />
-          </div>
-          <span className="flex-1 font-medium text-sm">{item.label}</span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-        </Link>
-      ))}
+      {items.map((item, i) => {
+        const badge = badges?.[item.path] ?? 0;
+        return (
+          <Link
+            key={i}
+            href={item.path}
+            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30 last:border-0"
+          >
+            <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <item.icon className="w-4 h-4 text-primary" />
+            </div>
+            <span className="flex-1 font-medium text-sm">{item.label}</span>
+            {badge > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 bg-violet-600 text-white text-[11px] font-bold rounded-full flex items-center justify-center mr-1">
+                {badge > 99 ? "99+" : badge}
+              </span>
+            )}
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Link>
+        );
+      })}
     </div>
   </div>
 );
@@ -878,6 +890,7 @@ export default function Profile() {
   const [showEdit, setShowEdit]         = useState(false);
   const [showStoreEdit, setShowStoreEdit] = useState(false);
   const [sellerInfo, setSellerInfo]     = useState<SellerInfo | null>(null);
+  const [unreadCount, setUnreadCount]   = useState(0);
   const { user: tgUser } = useTelegram();
 
   const isAdmin = tgUser?.id === ADMIN_TG_ID;
@@ -891,6 +904,21 @@ export default function Profile() {
   useEffect(() => {
     setUser(loadProfile());
     setSellerInfo(loadSellerInfo());
+
+    // Fetch unread notifications count
+    const tgId = String(
+      (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id ??
+      localStorage.getItem("tg_user_id") ?? ""
+    );
+    if (tgId) {
+      fetch(`/api/notifications?telegramId=${tgId}`)
+        .then(r => r.json())
+        .then(d => {
+          const count = (d.notifications ?? []).filter((n: any) => !n.isRead).length;
+          setUnreadCount(count);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const handleLogout = () => {
@@ -1058,7 +1086,7 @@ export default function Profile() {
             }}
           />
 
-          <MenuSection items={settingsItems} title="Qo'shimcha" />
+          <MenuSection items={settingsItems} title="Qo'shimcha" badges={{ "/notifications": unreadCount }} />
 
           {/* Admin Panel button — only for admin */}
           {isAdmin && (

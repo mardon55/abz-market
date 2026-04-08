@@ -161,3 +161,16 @@ export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Banner = typeof bannersTable.$inferSelect;
 export type FlashSale = typeof flashSalesTable.$inferSelect;
 export type Address = typeof addressesTable.$inferSelect;
+
+export const notificationsTable = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  telegramId: text("telegram_id"),           // null = broadcast to all
+  type: text("type").notNull(),              // order_ready | store_approved | announcement | etc.
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  isRead: boolean("is_read").default(false),
+  meta: text("meta"),                        // JSON string for extra data (orderId, storeId…)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Notification = typeof notificationsTable.$inferSelect;

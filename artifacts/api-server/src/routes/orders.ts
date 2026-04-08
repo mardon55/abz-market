@@ -3,6 +3,14 @@ import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, productsTable, storesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
+import { createNotification } from "./notifications";
+
+const ORDER_STATUS_MAP: Record<string, { title: string; body: string }> = {
+  processing: { title: "Buyurtma qabul qilindi ✅", body: "Buyurtmangiz ishlov berilmoqda." },
+  ready:      { title: "Buyurtma tayyor! 🎉",       body: "Buyurtmangiz olib ketishga yoki yetkazib berishga tayyor." },
+  delivered:  { title: "Buyurtma yetkazildi 🚚",    body: "Buyurtmangiz muvaffaqiyatli yetkazildi. Xaridingiz uchun rahmat!" },
+  cancelled:  { title: "Buyurtma bekor qilindi ❌",  body: "Afsuski buyurtmangiz bekor qilindi. Batafsil ma'lumot uchun biz bilan bog'laning." },
+};
 
 const router: IRouter = Router();
 
@@ -176,6 +184,18 @@ router.patch("/orders/:id", async (req, res) => {
       .select()
       .from(orderItemsTable)
       .where(eq(orderItemsTable.orderId, updated.id));
+
+    // Send notification to customer if status changed
+    const notif = ORDER_STATUS_MAP[body.status];
+    if (notif && updated.telegramId) {
+      await createNotification({
+        telegramId: updated.telegramId,
+        type: `order_${body.status}`,
+        title: notif.title,
+        body: `${updated.orderNumber} — ${notif.body}`,
+        meta: { orderId: updated.id, orderNumber: updated.orderNumber },
+      }).catch(() => {});
+    }
 
     res.json({ ...updated, items });
   } catch (err) {

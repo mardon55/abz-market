@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { storesTable } from "@workspace/db/schema";
 import { eq, ilike, or, and } from "drizzle-orm";
 import { CreateStoreBody } from "@workspace/api-zod";
+import { createNotification } from "./notifications";
 
 const router: IRouter = Router();
 
@@ -77,6 +78,8 @@ router.patch("/stores/:id", async (req, res) => {
       updates = { type: "partner", isVerified: true };
     } else if (action === "reject") {
       updates = { type: "rejected", isVerified: false };
+    } else if (action === "open") {
+      updates = { type: "partner", isVerified: true };
     } else {
       // General update
       if (name)         updates.name = name;
@@ -100,6 +103,28 @@ router.patch("/stores/:id", async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Store not found" });
+
+    // Send notification to store owner
+    if (updated.ownerTelegramId) {
+      if (action === "approve" || action === "open") {
+        await createNotification({
+          telegramId: updated.ownerTelegramId,
+          type: "store_approved",
+          title: "Do'koningiz tasdiqlandi! 🎉",
+          body: `"${updated.name}" do'koni muvaffaqiyatli ochildi va faol holga keltirildi.`,
+          meta: { storeId: updated.id, storeName: updated.name },
+        }).catch(() => {});
+      } else if (action === "reject") {
+        await createNotification({
+          telegramId: updated.ownerTelegramId,
+          type: "store_rejected",
+          title: "Do'kon arizasi rad etildi ❌",
+          body: `"${updated.name}" do'koni arizangiz ko'rib chiqildi, afsuski rad etildi. Batafsil ma'lumot uchun admin bilan bog'laning.`,
+          meta: { storeId: updated.id, storeName: updated.name },
+        }).catch(() => {});
+      }
+    }
+
     res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Error updating store");

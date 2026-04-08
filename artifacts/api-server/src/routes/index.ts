@@ -11,6 +11,7 @@ import reviewsRouter from "./reviews";
 import bannersRouter from "./banners";
 import flashSalesRouter from "./flash-sales";
 import addressesRouter from "./addresses";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(reviewsRouter);
 router.use(bannersRouter);
 router.use(flashSalesRouter);
 router.use(addressesRouter);
+router.use(notificationsRouter);
 
 export default router;
