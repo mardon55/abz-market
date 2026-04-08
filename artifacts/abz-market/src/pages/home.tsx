@@ -52,7 +52,7 @@ const CAT_ICONS: Record<string, string> = {
 
 const QUICK_ACTIONS = [
   { img: "/icons/flash.png",    label: "Flash sale",   path: "/catalog",              bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
-  { img: "/icons/flame.png",    label: "Top mahsulot", path: "/catalog?featured=true",bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
+  { img: "/icons/flame.png",    label: "Top mahsulot", path: "/top-mahsulotlar", bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
   { img: "/icons/yangilar.png", label: "Yangilar",     path: "/catalog",              bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
   { img: "/icons/dokonlar.png", label: "Do'konlar",    path: "/stores",               bg: "from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40" },
 ];
@@ -439,7 +439,7 @@ export default function Home() {
           <h2 className="font-display font-bold text-[17px] flex items-center gap-2">
             <Flame className="w-4 h-4 text-rose-500" /> Top mahsulotlar
           </h2>
-          <Link href="/catalog?featured=true" className="text-primary text-xs font-semibold flex items-center gap-0.5">
+          <Link href="/top-mahsulotlar" className="text-primary text-xs font-semibold flex items-center gap-0.5">
             Ko'proq <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
