@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Search, MapPin, Phone, X, Home, Briefcase, Building2,
   Star, RefreshCw, Calendar, ChevronDown, ShoppingBag,
-  TrendingUp, Users, User, Loader2, Hash,
+  TrendingUp, Users, User, Loader2, Hash, UserCheck, UserX,
 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ interface ApiUser {
   phone: string | null;
   avatar: string | null;
   createdAt: string;
+  isRegistered?: boolean;
   orderCount?: number;
   totalSpent?: number;
 }
@@ -108,7 +109,18 @@ function UserModal({ user, onClose }: { user: ApiUser; onClose: () => void }) {
               }
             </div>
             <div>
-              <div className="font-display font-bold text-xl">{user.firstName} {user.lastName ?? ""}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="font-display font-bold text-xl">{user.firstName} {user.lastName ?? ""}</div>
+                {user.isRegistered === false ? (
+                  <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                    <UserX className="w-3 h-3" /> Mehmon
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+                    <UserCheck className="w-3 h-3" /> Ro'yxatdan o'tgan
+                  </span>
+                )}
+              </div>
               {user.telegramId && (
                 <div className="text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
                   <Hash className="w-3 h-3" /> {user.telegramId}
@@ -385,8 +397,13 @@ export default function UsersPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm">
-                      {u.firstName} {u.lastName ?? ""}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-sm truncate">{u.firstName} {u.lastName ?? ""}</span>
+                      {u.isRegistered === false && (
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">
+                          Mehmon
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                       {u.phone && (

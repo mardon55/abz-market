@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { ordersTable, orderItemsTable, productsTable, storesTable } from "@workspace/db/schema";
+import { ordersTable, orderItemsTable, productsTable, storesTable, usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { createNotification } from "./notifications";
@@ -102,6 +102,29 @@ router.post("/orders", async (req, res) => {
         telegramId: body.telegramId ?? null,
       })
       .returning();
+
+    // Auto-register user from order data
+    if (body.telegramId) {
+      try {
+        const nameParts = (body.customerName || "").trim().split(" ");
+        const firstName = nameParts[0] || "Foydalanuvchi";
+        const lastName  = nameParts.slice(1).join(" ") || null;
+        const existing  = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.telegramId, body.telegramId));
+        if (existing.length === 0) {
+          await db.insert(usersTable).values({
+            telegramId: body.telegramId,
+            firstName,
+            lastName,
+            phone: body.customerPhone || null,
+          });
+        } else {
+          // Update phone if not set
+          await db.update(usersTable)
+            .set({ phone: body.customerPhone || null, updatedAt: new Date() })
+            .where(eq(usersTable.telegramId, body.telegramId));
+        }
+      } catch { /* non-critical, ignore */ }
+    }
 
     await db.insert(orderItemsTable).values(
       productDetails.map(({ product, quantity, color }) => ({
