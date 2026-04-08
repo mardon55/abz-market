@@ -174,3 +174,29 @@ export const notificationsTable = pgTable("notifications", {
 });
 
 export type Notification = typeof notificationsTable.$inferSelect;
+
+// ── Pickup points ─────────────────────────────────────────────────────────────
+export const pickupPointsTable = pgTable("pickup_points", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  phone: text("phone"),
+  workingHours: text("working_hours"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PickupPoint = typeof pickupPointsTable.$inferSelect;
+
+// ── Delivery zones ────────────────────────────────────────────────────────────
+export const deliveryZonesTable = pgTable("delivery_zones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  region: text("region").notNull(),
+  district: text("district"),
+  price: integer("price").notNull().default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type DeliveryZone = typeof deliveryZonesTable.$inferSelect;

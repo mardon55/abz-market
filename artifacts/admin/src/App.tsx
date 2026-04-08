@@ -14,6 +14,7 @@ import PaymentMethods from "@/pages/payment-methods";
 import Banners from "@/pages/banners";
 import FlashSales from "@/pages/flash-sales";
 import TopProducts from "@/pages/top-products";
+import Delivery from "@/pages/delivery";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ function AdminRouter() {
         <Route path="/banners"       component={Banners}       />
         <Route path="/flash-sales"   component={FlashSales}    />
         <Route path="/top-products"  component={TopProducts}   />
+        <Route path="/delivery"      component={Delivery}      />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>

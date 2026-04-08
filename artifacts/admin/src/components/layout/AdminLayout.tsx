@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Store,
   LayoutGrid, Bell, Search, ChevronDown, Menu, X,
-  CreditCard, Image as ImageIcon, Zap, Crown,
+  CreditCard, Image as ImageIcon, Zap, Crown, Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ const NAV = [
   { icon: Crown,           label: "Top Mahsulotlar",  path: "/top-products" },
   { icon: ImageIcon,       label: "Bannerlar",        path: "/banners" },
   { icon: Zap,             label: "Flash Sale",       path: "/flash-sales" },
+  { icon: Truck,           label: "Yetkazib berish",  path: "/delivery" },
 ];
 
 function NavItem({ icon: Icon, label, path, collapsed }: any) {
