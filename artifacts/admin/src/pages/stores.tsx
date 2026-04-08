@@ -259,6 +259,7 @@ export default function Stores() {
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("all");
   const [selected, setSelected] = useState<ApiStore | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data: stores = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stores"],
@@ -508,16 +509,35 @@ export default function Stores() {
                   )}
 
                   {status !== "pending" && (
-                    <button
-                      onClick={() => {
-                        if (!confirm(`"${s.name}" do'konini o'chirishni tasdiqlaysizmi?`)) return;
-                        deleteMut.mutate(s.id);
-                      }}
-                      disabled={deleteMut.isPending}
-                      className="w-8 h-8 bg-muted hover:bg-red-100 hover:text-red-600 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    deleteConfirmId === s.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            deleteMut.mutate(s.id, { onSettled: () => setDeleteConfirmId(null) });
+                          }}
+                          disabled={deleteMut.isPending}
+                          className="h-8 px-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {deleteMut.isPending ? (
+                            <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          ) : "Ha"}
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="h-8 px-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold"
+                        >
+                          Yo'q
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirmId(s.id)}
+                        disabled={deleteMut.isPending}
+                        className="w-8 h-8 bg-muted hover:bg-red-100 hover:text-red-600 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )
                   )}
                 </div>
               </div>

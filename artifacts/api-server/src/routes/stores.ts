@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { storesTable } from "@workspace/db/schema";
-import { eq, ilike, or, and } from "drizzle-orm";
+import {
+  storesTable, productsTable, ordersTable, orderItemsTable,
+  reviewsTable, notificationsTable,
+} from "@workspace/db/schema";
+import { eq, ilike, and, inArray, like } from "drizzle-orm";
 import { CreateStoreBody } from "@workspace/api-zod";
 import { createNotification } from "./notifications";
 
@@ -135,7 +138,48 @@ router.patch("/stores/:id", async (req, res) => {
 router.delete("/stores/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    // 1. Get all product IDs belonging to this store
+    const storeProducts = await db
+      .select({ id: productsTable.id })
+      .from(productsTable)
+      .where(eq(productsTable.storeId, id));
+    const productIds = storeProducts.map(p => p.id);
+
+    // 2. Get all order IDs for this store
+    const storeOrders = await db
+      .select({ id: ordersTable.id })
+      .from(ordersTable)
+      .where(eq(ordersTable.storeId, id));
+    const orderIds = storeOrders.map(o => o.id);
+
+    // 3. Delete order items (references orders and products)
+    if (orderIds.length > 0) {
+      await db.delete(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
+    }
+
+    // 4. Delete reviews referencing this store or its products
+    await db.delete(reviewsTable).where(eq(reviewsTable.storeId, id));
+    if (productIds.length > 0) {
+      await db.delete(reviewsTable).where(inArray(reviewsTable.productId, productIds));
+    }
+
+    // 5. Delete orders for this store
+    if (orderIds.length > 0) {
+      await db.delete(ordersTable).where(eq(ordersTable.storeId, id));
+    }
+
+    // 6. Delete products
+    if (productIds.length > 0) {
+      await db.delete(productsTable).where(eq(productsTable.storeId, id));
+    }
+
+    // 7. Delete notifications referencing this store
+    await db.delete(notificationsTable).where(like(notificationsTable.meta, `%"storeId":"${id}"%`));
+
+    // 8. Finally delete the store itself
     await db.delete(storesTable).where(eq(storesTable.id, id));
+
     res.status(204).end();
   } catch (err) {
     req.log.error({ err }, "Error deleting store");
