@@ -16,10 +16,9 @@ interface ApiCategory {
   subcategories?: ApiCategory[];
 }
 
-const EMOJIS = [
-  "🪑","🛋","🛏","📚","🪞","🛁","🧹","🪴","🖼️","🏮",
-  "🚿","🪟","🪵","🏠","🛒","🍳","🧸","💡","🪤","🔧",
-  "🎨","🧺","🪣","🧴","🛗","🚪","🪜","🛡️","🪆","🎀",
+const QUICK_EMOJIS = [
+  "🪑","🛋","🛏","📚","🪞","🛁","🧹","🪴","🚪","🍳",
+  "🧸","💡","🪵","🏠","🛒","🖼️","🪟","💺","🗄️","🛗",
 ];
 
 const BG_GRADIENTS = [
@@ -133,9 +132,33 @@ function CategoryFormModal({
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Emoji</label>
-            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
-              {EMOJIS.map((e) => (
+            <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+              Emoji belgisi
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border-2 border-primary/30 flex items-center justify-center text-3xl flex-shrink-0 select-none">
+                {form.emoji || "?"}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Emoji kiriting yoki pastdan tanlang"
+                  value={form.emoji}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const chars = [...val];
+                    if (chars.length <= 2) setForm((f) => ({ ...f, emoji: val }));
+                  }}
+                  className="w-full h-10 px-3 bg-muted border border-border/60 rounded-xl text-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  maxLength={4}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Klaviaturangizdan emoji kiriting yoki tezkor tanlov:
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {QUICK_EMOJIS.map((e) => (
                 <button
                   key={e}
                   type="button"
