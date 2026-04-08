@@ -29,9 +29,10 @@ router.get("/categories", async (req, res) => {
 
 router.post("/categories", async (req, res) => {
   try {
-    const { name, icon, parentId, sortOrder } = req.body as {
+    const { name, icon, image, parentId, sortOrder } = req.body as {
       name: string;
       icon?: string;
+      image?: string;
       parentId?: string | null;
       sortOrder?: number;
     };
@@ -58,6 +59,7 @@ router.post("/categories", async (req, res) => {
       .values({
         name: name.trim(),
         icon: icon ?? null,
+        image: image ?? null,
         parentId: parentId ?? null,
         sortOrder: sortOrder ?? 0,
       })
@@ -72,14 +74,16 @@ router.post("/categories", async (req, res) => {
 router.patch("/categories/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, icon, sortOrder } = req.body as {
+    const { name, icon, image, sortOrder } = req.body as {
       name?: string;
       icon?: string;
+      image?: string;
       sortOrder?: number;
     };
-    const updates: Partial<{ name: string; icon: string; sortOrder: number }> = {};
+    const updates: Partial<{ name: string; icon: string; image: string; sortOrder: number }> = {};
     if (name) updates.name = name.trim();
     if (icon !== undefined) updates.icon = icon;
+    if (image !== undefined) updates.image = image;
     if (sortOrder !== undefined) updates.sortOrder = sortOrder;
 
     const [updated] = await db

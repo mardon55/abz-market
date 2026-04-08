@@ -11,64 +11,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
 
-// ── Category styling maps ─────────────────────────────────────────────────────
-const CAT_IMG: Record<string, string> = {
-  Shkaflar:      "/icons/shkaflar.png",
-  Komodlar:      "/icons/komodlar.png",
-  Oshxonalar:    "/icons/oshxonalar.png",
-  Yotoqxona:     "/icons/yotoqxona.png",
-  Yotoqona:      "/icons/yotoqona.png",
-  Stollar:       "/icons/stollar.png",
-  Stullar:       "/icons/stullar.png",
-  Divonlar:      "/icons/divonlar.png",
-  Javonlar:      "/icons/javonlar.png",
-  "Bola xonasi": "/icons/bola-xonasi.png",
-  Chiroqlar:     "/icons/chiroqlar.png",
-  Gilamlar:      "/icons/gilamlar.png",
-  Karavotlar:    "/icons/karavotlar.png",
-  Kreslo:        "/icons/kreslo.png",
-  Matraslar:     "/icons/matraslar.png",
-  "Ofis mebeli": "/icons/ofis-mebeli.png",
-};
-
-const CAT_BG: Record<string, string> = {
-  Shkaflar:      "from-violet-500 to-purple-600",
-  Komodlar:      "from-amber-500 to-orange-500",
-  Oshxonalar:    "from-emerald-500 to-teal-600",
-  Yotoqxona:     "from-blue-500 to-indigo-600",
-  Yotoqona:      "from-blue-500 to-indigo-600",
-  Stollar:       "from-rose-500 to-pink-600",
-  Stullar:       "from-cyan-500 to-sky-600",
-  Divonlar:      "from-fuchsia-500 to-violet-600",
-  Javonlar:      "from-lime-500 to-green-600",
-  "Bola xonasi": "from-pink-400 to-rose-500",
-  Chiroqlar:     "from-yellow-400 to-amber-500",
-  Gilamlar:      "from-orange-400 to-red-500",
-  Karavotlar:    "from-indigo-500 to-blue-600",
-  Kreslo:        "from-teal-500 to-emerald-600",
-  Matraslar:     "from-sky-400 to-cyan-500",
-  "Ofis mebeli": "from-slate-500 to-gray-600",
-};
-
-const FALLBACK_BG = [
-  "from-violet-500 to-purple-600", "from-amber-500 to-orange-500",
-  "from-emerald-500 to-teal-600",  "from-blue-500 to-indigo-600",
-  "from-rose-500 to-pink-600",     "from-cyan-500 to-sky-600",
-  "from-fuchsia-500 to-violet-600","from-lime-500 to-green-600",
+// ── Gradient fallback ──────────────────────────────────────────────────────
+const GRADIENTS = [
+  "from-violet-500 to-purple-600",
+  "from-amber-500 to-orange-500",
+  "from-emerald-500 to-teal-600",
+  "from-blue-500 to-indigo-600",
+  "from-rose-500 to-pink-600",
+  "from-cyan-500 to-sky-600",
+  "from-fuchsia-500 to-violet-600",
+  "from-lime-500 to-green-600",
 ];
 
-function catImg(name: string) { return CAT_IMG[name] ?? null; }
-function catBg(name: string, idx = 0) {
-  return CAT_BG[name] ?? FALLBACK_BG[idx % FALLBACK_BG.length];
-}
+function gradient(idx: number) { return GRADIENTS[idx % GRADIENTS.length]; }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SubCategory {
-  id: string; name: string; icon: string | null; productCount: number | null;
+  id: string;
+  name: string;
+  icon: string | null;
+  image: string | null;
+  productCount: number | null;
 }
 interface Category {
-  id: string; name: string; icon: string | null;
-  productCount: number | null; subcategories?: SubCategory[];
+  id: string;
+  name: string;
+  icon: string | null;
+  image: string | null;
+  productCount: number | null;
+  subcategories?: SubCategory[];
 }
 
 type SortKey = "default" | "price_asc" | "price_desc" | "rating";
@@ -79,6 +50,25 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "rating",     label: "Eng yaxshi" },
 ];
 
+// ── Category thumbnail ────────────────────────────────────────────────────────
+function CatImage({ src, alt, className }: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={cn("object-cover", className)}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function Catalog() {
   const [location] = useLocation();
@@ -86,16 +76,13 @@ export default function Catalog() {
   const [sortKey, setSortKey]             = useState<SortKey>("default");
   const [showSortSheet, setShowSortSheet] = useState(false);
 
-  // Navigation: activeParent = category user drilled into, activeSub = subcategory chip
   const [activeParent, setActiveParent] = useState<Category | null>(null);
   const [activeSub, setActiveSub]       = useState<SubCategory | null>(null);
 
-  // Product filter ID = subcategory ID if selected, else parent ID (null = all)
   const filterCategoryId =
     activeSub?.id ??
     (activeParent && activeParent.id !== "__all__" ? activeParent.id : undefined);
 
-  // Parse ?category=X from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const cat = params.get("category");
@@ -105,7 +92,6 @@ export default function Catalog() {
   const { data: catData, isLoading: catLoading } = useCategories();
   const categories: Category[] = (catData?.categories ?? []) as Category[];
 
-  // Resolve pending URL category after categories load
   useEffect(() => {
     const pending = sessionStorage.getItem("catalog_pending_cat");
     if (!pending || categories.length === 0) return;
@@ -131,7 +117,6 @@ export default function Catalog() {
     return 0;
   });
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   const goHome = () => {
     hapticFeedback("selection");
     setActiveParent(null); setActiveSub(null); setSearchQuery("");
@@ -226,7 +211,7 @@ export default function Catalog() {
           </div>
         )}
 
-        {/* Subcategory chips (horizontal scroll) */}
+        {/* Subcategory chips with images (horizontal scroll) */}
         {isInParent && hasSubs && (
           <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pb-2.5 pt-0.5">
             <button
@@ -245,13 +230,19 @@ export default function Catalog() {
                 key={sub.id}
                 onClick={() => selectSub(sub)}
                 className={cn(
-                  "flex-none flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap",
+                  "flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap",
                   activeSub?.id === sub.id
                     ? "bg-primary text-white shadow-ios-sm shadow-primary/30"
                     : "glass-card text-foreground/70"
                 )}
               >
-                {sub.icon && <span className="text-sm leading-none">{sub.icon}</span>}
+                {/* Small image thumbnail in chip */}
+                {sub.image && (
+                  <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                    <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {!sub.image && sub.icon && <span className="text-sm leading-none">{sub.icon}</span>}
                 {sub.name}
                 {sub.productCount ? (
                   <span className={cn(
@@ -293,29 +284,35 @@ export default function Catalog() {
                     onClick={() => selectParent(cat)}
                     className="relative overflow-hidden rounded-3xl aspect-[4/3] press shadow-ios"
                   >
-                    <div className={cn("absolute inset-0 bg-gradient-to-br", catBg(cat.name, idx))} />
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent" />
-                    <div className="absolute -top-5 -right-5 w-24 h-24 bg-white/15 rounded-full blur-sm" />
-                    <div className="absolute -bottom-5 -left-5 w-20 h-20 bg-white/10 rounded-full blur-sm" />
+                    {/* Background — image or gradient */}
+                    {cat.image ? (
+                      <>
+                        <CatImage src={cat.image} alt={cat.name} className="absolute inset-0 w-full h-full" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                        {/* Gradient fallback in case image fails */}
+                        <div className={cn("absolute inset-0 -z-10 bg-gradient-to-br", gradient(idx))} />
+                      </>
+                    ) : (
+                      <>
+                        <div className={cn("absolute inset-0 bg-gradient-to-br", gradient(idx))} />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent" />
+                        <div className="absolute -top-5 -right-5 w-24 h-24 bg-white/15 rounded-full blur-sm" />
+                        <div className="absolute -bottom-5 -left-5 w-20 h-20 bg-white/10 rounded-full blur-sm" />
+                      </>
+                    )}
 
-                    <div className="relative z-10 flex flex-col justify-between h-full p-3.5">
-                      <div className="w-14 h-14 bg-white/25 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-sm overflow-hidden">
-                        {catImg(cat.name)
-                          ? <img src={catImg(cat.name)!} alt={cat.name} className="w-11 h-11 object-contain drop-shadow-md" />
-                          : <span className="text-3xl">{cat.icon ?? "🪑"}</span>
-                        }
-                      </div>
+                    <div className="relative z-10 flex flex-col justify-end h-full p-3.5">
                       <div>
                         <div className="font-display font-bold text-white text-[15px] leading-tight drop-shadow">
                           {cat.name}
                         </div>
                         {subCount > 0 ? (
-                          <div className="text-white/70 text-[11px] mt-0.5 flex items-center gap-1">
+                          <div className="text-white/75 text-[11px] mt-0.5 flex items-center gap-1">
                             <Grid3x3 className="w-2.5 h-2.5" />
                             {subCount} ta bo'lim
                           </div>
                         ) : cat.productCount ? (
-                          <div className="text-white/70 text-[11px] mt-0.5">{cat.productCount} ta mahsulot</div>
+                          <div className="text-white/75 text-[11px] mt-0.5">{cat.productCount} ta mahsulot</div>
                         ) : null}
                       </div>
                     </div>
@@ -336,7 +333,7 @@ export default function Catalog() {
           <button
             onClick={() => {
               hapticFeedback("selection");
-              setActiveParent({ id: "__all__", name: "Barcha mahsulotlar", icon: null, productCount: null });
+              setActiveParent({ id: "__all__", name: "Barcha mahsulotlar", icon: null, image: null, productCount: null });
             }}
             className="w-full flex items-center justify-between glass-card rounded-2xl px-4 py-3.5 press shadow-ios-sm"
           >
@@ -367,13 +364,20 @@ export default function Catalog() {
                 <h3 className="font-display font-bold text-lg">Qidiruv natijalari</h3>
               ) : activeSub ? (
                 <h3 className="font-display font-bold text-lg flex items-center gap-2">
-                  {activeSub.icon && <span className="text-xl">{activeSub.icon}</span>}
+                  {activeSub.image && (
+                    <div className="w-7 h-7 rounded-xl overflow-hidden">
+                      <img src={activeSub.image} alt={activeSub.name} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {!activeSub.image && activeSub.icon && <span className="text-xl">{activeSub.icon}</span>}
                   {activeSub.name}
                 </h3>
               ) : activeParent?.id !== "__all__" && activeParent ? (
                 <h3 className="font-display font-bold text-lg flex items-center gap-2">
-                  {catImg(activeParent.name) && (
-                    <img src={catImg(activeParent.name)!} alt="" className="w-6 h-6 object-contain" />
+                  {activeParent.image && (
+                    <div className="w-7 h-7 rounded-xl overflow-hidden">
+                      <img src={activeParent.image} alt={activeParent.name} className="w-full h-full object-cover" />
+                    </div>
                   )}
                   {activeParent.name}
                 </h3>
@@ -396,7 +400,7 @@ export default function Catalog() {
             )}
           </div>
 
-          {/* Subcategory cards grid (shown when parent has subs, no sub selected yet) */}
+          {/* Subcategory cards grid — with images */}
           {isInParent && hasSubs && !activeSub && !isSearching && (
             <>
               <div className="grid grid-cols-3 gap-2.5 mb-4">
@@ -404,24 +408,31 @@ export default function Catalog() {
                   <button
                     key={sub.id}
                     onClick={() => selectSub(sub)}
-                    className={cn(
-                      "relative overflow-hidden rounded-2xl py-3.5 px-2 text-center press shadow-ios-sm bg-gradient-to-br",
-                      FALLBACK_BG[idx % FALLBACK_BG.length]
-                    )}
+                    className="relative overflow-hidden rounded-2xl aspect-square press shadow-ios-sm"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
-                    <div className="relative z-10">
-                      <div className="text-2xl mb-1.5">{sub.icon ?? "📦"}</div>
-                      <div className="text-white text-[11px] font-bold leading-tight line-clamp-2 px-0.5">{sub.name}</div>
+                    {sub.image ? (
+                      <>
+                        <CatImage src={sub.image} alt={sub.name} className="absolute inset-0 w-full h-full" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                        <div className={cn("absolute inset-0 -z-10 bg-gradient-to-br", gradient(idx))} />
+                      </>
+                    ) : (
+                      <>
+                        <div className={cn("absolute inset-0 bg-gradient-to-br", gradient(idx))} />
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent" />
+                      </>
+                    )}
+                    <div className="relative z-10 flex flex-col justify-end h-full p-2">
+                      {!sub.image && <div className="text-2xl mb-1 text-center">{sub.icon ?? "📦"}</div>}
+                      <div className="text-white text-[11px] font-bold leading-tight line-clamp-2 text-center">{sub.name}</div>
                       {sub.productCount ? (
-                        <div className="text-white/70 text-[10px] mt-1">{sub.productCount} ta</div>
+                        <div className="text-white/70 text-[10px] mt-0.5 text-center">{sub.productCount} ta</div>
                       ) : null}
                     </div>
                   </button>
                 ))}
               </div>
 
-              {/* Divider before products */}
               {sorted.length > 0 && (
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex-1 h-px bg-border/50" />
@@ -432,14 +443,12 @@ export default function Catalog() {
             </>
           )}
 
-          {/* Loading */}
           {prodLoading && (
             <div className="grid grid-cols-2 gap-3">
               {[1,2,3,4].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
             </div>
           )}
 
-          {/* Empty state */}
           {!prodLoading && sorted.length === 0 && (isSearching || activeSub || !hasSubs) && (
             <div className="text-center py-16">
               <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -456,7 +465,6 @@ export default function Catalog() {
             </div>
           )}
 
-          {/* Products grid */}
           {!prodLoading && sorted.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {sorted.map((product) => (

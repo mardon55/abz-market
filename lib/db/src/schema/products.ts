@@ -17,6 +17,7 @@ export const categoriesTable = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   icon: text("icon"),
+  image: text("image"),
   productCount: integer("product_count").default(0),
   parentId: uuid("parent_id"),
   sortOrder: integer("sort_order").default(0),
