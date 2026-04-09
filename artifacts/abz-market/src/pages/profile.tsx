@@ -6,7 +6,7 @@ import {
   HelpCircle, LogOut, ChevronRight, Store, BarChart2,
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
   ShoppingBag, Star, Bell, Clock, CheckCircle, XCircle,
-  Plus, Camera, Save, AlertCircle, ImageIcon, Pencil,
+  Plus, Camera, Save, AlertCircle, ImageIcon, Pencil, ShieldCheck,
 } from "lucide-react";
 import { hapticFeedback, useTelegram } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -980,6 +980,17 @@ export default function Profile() {
             <div className="w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">Ma'lumotlar yuklanmoqda...</p>
+          {/* Admin button always visible — even while loading */}
+          {isAdmin && (
+            <button
+              onClick={openAdminPanel}
+              className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-2xl text-sm font-semibold shadow-lg shadow-primary/30"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Admin Panel
+              <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-md text-[10px] font-bold">ADMIN</span>
+            </button>
+          )}
         </div>
       ) : !user ? (
         <div className="flex flex-col items-center px-6 pt-8 pb-10">

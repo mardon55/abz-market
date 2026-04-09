@@ -42,18 +42,40 @@ function AdminRouter() {
 
 function AppContent() {
   const ADMIN_TOKEN = "abz_admin_tg_259875997";
+  const ADMIN_TG_ID = "259875997";
+
   const [authed, setAuthed] = useState(() => {
-    // Check URL hash for token (e.g. #t=abz_admin_tg_259875997)
+    // 1. Check URL hash for token (e.g. #t=abz_admin_tg_259875997)
     try {
       const hash = window.location.hash;
       const match = hash.match(/[#&]t=([^&]+)/);
       if (match && match[1] === ADMIN_TOKEN) {
         localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN);
-        // Clean hash from URL without reload
         history.replaceState(null, "", window.location.pathname + window.location.search);
         return true;
       }
     } catch {}
+
+    // 2. Check URL query param ?t=TOKEN (fallback)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("t");
+      if (t === ADMIN_TOKEN) {
+        localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN);
+        return true;
+      }
+    } catch {}
+
+    // 3. Auto-auth via Telegram WebApp SDK (when opened as Mini App)
+    try {
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser && String(tgUser.id) === ADMIN_TG_ID) {
+        localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN);
+        return true;
+      }
+    } catch {}
+
+    // 4. Fallback: check localStorage
     return localStorage.getItem("abz_admin_tg_token") === ADMIN_TOKEN;
   });
 
