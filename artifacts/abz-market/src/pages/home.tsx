@@ -81,6 +81,7 @@ interface BannerItem {
   image?: string | null;
   gradient: string;
   link: string;
+  categoryId?: string | null;
 }
 
 function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavigate: (p: string) => void }) {
@@ -103,7 +104,11 @@ function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavi
           style={{ transform: `translateX(-${active * 100}%)` }}
         >
           {banners.map((b) => (
-            <div key={b.id} className="flex-none w-full cursor-pointer" onClick={() => onNavigate(b.link || "/catalog")}>
+            <div
+              key={b.id}
+              className="flex-none w-full cursor-pointer"
+              onClick={() => onNavigate(b.categoryId ? `/catalog?category=${b.categoryId}` : (b.link || "/catalog"))}
+            >
               <div className={cn("relative aspect-[16/8] overflow-hidden bg-gradient-to-br", b.gradient)}>
                 {b.image && (
                   <img

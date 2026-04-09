@@ -27,18 +27,19 @@ router.get("/banners", async (req, res) => {
 // POST /banners — admin create
 router.post("/banners", async (req, res) => {
   try {
-    const { title, subtitle, badge, image, gradient, link, isActive, sortOrder } = req.body;
+    const { title, subtitle, badge, image, gradient, link, categoryId, isActive, sortOrder } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
 
     const [banner] = await db.insert(bannersTable).values({
       title,
-      subtitle:  subtitle  ?? null,
-      badge:     badge     ?? null,
-      image:     image     ?? null,
-      gradient:  gradient  ?? "from-violet-600 via-purple-600 to-fuchsia-500",
-      link:      link      ?? "/catalog",
-      isActive:  isActive  !== undefined ? Boolean(isActive)  : true,
-      sortOrder: sortOrder !== undefined ? Number(sortOrder)  : 0,
+      subtitle:   subtitle   ?? null,
+      badge:      badge      ?? null,
+      image:      image      ?? null,
+      gradient:   gradient   ?? "from-violet-600 via-purple-600 to-fuchsia-500",
+      link:       link       ?? "/catalog",
+      categoryId: categoryId ?? null,
+      isActive:   isActive   !== undefined ? Boolean(isActive)  : true,
+      sortOrder:  sortOrder  !== undefined ? Number(sortOrder)  : 0,
     }).returning();
 
     res.status(201).json(banner);
@@ -52,17 +53,18 @@ router.post("/banners", async (req, res) => {
 router.put("/banners/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, subtitle, badge, image, gradient, link, isActive, sortOrder } = req.body;
+    const { title, subtitle, badge, image, gradient, link, categoryId, isActive, sortOrder } = req.body;
 
     const updates: Record<string, any> = {};
-    if (title     !== undefined) updates.title     = title;
-    if (subtitle  !== undefined) updates.subtitle  = subtitle;
-    if (badge     !== undefined) updates.badge     = badge;
-    if (image     !== undefined) updates.image     = image;
-    if (gradient  !== undefined) updates.gradient  = gradient;
-    if (link      !== undefined) updates.link      = link;
-    if (isActive  !== undefined) updates.isActive  = Boolean(isActive);
-    if (sortOrder !== undefined) updates.sortOrder = Number(sortOrder);
+    if (title      !== undefined) updates.title      = title;
+    if (subtitle   !== undefined) updates.subtitle   = subtitle;
+    if (badge      !== undefined) updates.badge      = badge;
+    if (image      !== undefined) updates.image      = image;
+    if (gradient   !== undefined) updates.gradient   = gradient;
+    if (link       !== undefined) updates.link       = link;
+    if (categoryId !== undefined) updates.categoryId = categoryId || null;
+    if (isActive   !== undefined) updates.isActive   = Boolean(isActive);
+    if (sortOrder  !== undefined) updates.sortOrder  = Number(sortOrder);
 
     const [banner] = await db.update(bannersTable).set(updates).where(eq(bannersTable.id, id)).returning();
     if (!banner) return res.status(404).json({ error: "Banner not found" });

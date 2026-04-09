@@ -117,6 +117,7 @@ export const bannersTable = pgTable("banners", {
   image: text("image"),
   gradient: text("gradient").default("from-violet-600 via-purple-600 to-fuchsia-500"),
   link: text("link").default("/catalog"),
+  categoryId: uuid("category_id").references(() => categoriesTable.id, { onDelete: "set null" }),
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

@@ -2,13 +2,19 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Edit2, Trash2, Eye, EyeOff, Image as ImageIcon,
-  GripVertical, X, Check, Loader2, AlertCircle, Palette,
+  GripVertical, X, Check, Loader2, AlertCircle, Palette, Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BASE = "/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
+interface Category {
+  id: string;
+  name: string;
+  parentId: string | null;
+}
+
 interface Banner {
   id: string;
   title: string;
@@ -17,6 +23,7 @@ interface Banner {
   image: string | null;
   gradient: string;
   link: string;
+  categoryId: string | null;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -54,7 +61,7 @@ async function compressImage(file: File, maxDim = 1200): Promise<string> {
 const emptyForm = () => ({
   title: "", subtitle: "", badge: "🔥 HOT",
   image: "", gradient: GRADIENTS[0].value,
-  link: "/catalog", isActive: true, sortOrder: 0,
+  link: "/catalog", categoryId: "", isActive: true, sortOrder: 0,
 });
 
 // ── Banner preview ─────────────────────────────────────────────────────────
@@ -85,17 +92,27 @@ function BannerModal({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(() => banner ? {
-    title:     banner.title,
-    subtitle:  banner.subtitle  ?? "",
-    badge:     banner.badge     ?? "",
-    image:     banner.image     ?? "",
-    gradient:  banner.gradient,
-    link:      banner.link,
-    isActive:  banner.isActive,
-    sortOrder: banner.sortOrder,
+    title:      banner.title,
+    subtitle:   banner.subtitle  ?? "",
+    badge:      banner.badge     ?? "",
+    image:      banner.image     ?? "",
+    gradient:   banner.gradient,
+    link:       banner.link,
+    categoryId: banner.categoryId ?? "",
+    isActive:   banner.isActive,
+    sortOrder:  banner.sortOrder,
   } : emptyForm());
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  // Fetch categories for the selector
+  const { data: catData } = useQuery<{ categories: Category[] }>({
+    queryKey: ["categories-all"],
+    queryFn: () => fetch(`${BASE}/categories`).then((r) => r.json()),
+  });
+  const allCategories = catData?.categories ?? [];
+  const parentCats = allCategories.filter((c) => !c.parentId);
+  const childCats  = allCategories.filter((c) =>  c.parentId);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -106,10 +123,11 @@ function BannerModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          subtitle:  form.subtitle  || null,
-          badge:     form.badge     || null,
-          image:     form.image     || null,
-          sortOrder: Number(form.sortOrder),
+          subtitle:   form.subtitle   || null,
+          badge:      form.badge      || null,
+          image:      form.image      || null,
+          categoryId: form.categoryId || null,
+          sortOrder:  Number(form.sortOrder),
         }),
       });
       if (!r.ok) throw new Error((await r.json()).error || "Xato");
@@ -201,6 +219,44 @@ function BannerModal({
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files)} />
           </div>
 
+          {/* Category selector — appears after image is set */}
+          {form.image && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" />
+                Reklama kategoriyasi
+                <span className="font-normal text-gray-400">(ixtiyoriy)</span>
+              </label>
+              <select
+                value={form.categoryId}
+                onChange={(e) => set("categoryId", e.target.value)}
+                className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+              >
+                <option value="">— Kategoriya tanlanmagan —</option>
+                {parentCats.length > 0 && (
+                  <optgroup label="── Asosiy kategoriyalar ──">
+                    {parentCats.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {childCats.length > 0 && (
+                  <optgroup label="── Subkategoriyalar ──">
+                    {childCats.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {form.categoryId && (
+                <p className="text-xs text-violet-600 mt-1 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  "Ko'rish" tugmasi bosilganda shu kategoriyaga o'tiladi
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Gradient */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-2">
@@ -291,6 +347,14 @@ export default function BannersPage() {
     refetchInterval: 10_000,
   });
   const banners = data?.banners ?? [];
+
+  const { data: catData } = useQuery<{ categories: Category[] }>({
+    queryKey: ["categories-all"],
+    queryFn: () => fetch(`${BASE}/categories`).then((r) => r.json()),
+  });
+  const categoryMap = Object.fromEntries(
+    (catData?.categories ?? []).map((c) => [c.id, c.name])
+  );
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
@@ -390,7 +454,14 @@ export default function BannersPage() {
                             <span className="text-[10px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{banner.badge}</span>
                           )}
                           <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">Tartib: {banner.sortOrder}</span>
-                          <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">→ {banner.link}</span>
+                          {banner.categoryId ? (
+                            <span className="text-[10px] font-bold bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                              <Tag className="w-2.5 h-2.5" />
+                              {categoryMap[banner.categoryId] ?? "Kategoriya"}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">→ {banner.link}</span>
+                          )}
                         </div>
                       </div>
                       <span className={cn(
