@@ -885,6 +885,7 @@ function MultipleStoresSection({ telegramId, onEditStore }: {
 // ── Main profile page ─────────────────────────────────────────
 export default function Profile() {
   const [user, setUser]                 = useState<UserProfile | null>(null);
+  const [restoring, setRestoring]       = useState(true); // checking DB for profile
   const [showSheet, setShowSheet]       = useState(false);
   const [showLogout, setShowLogout]     = useState(false);
   const [showEdit, setShowEdit]         = useState(false);
@@ -902,15 +903,17 @@ export default function Profile() {
   };
 
   useEffect(() => {
-    setUser(loadProfile());
+    const storedProfile = loadProfile();
+    setUser(storedProfile);
     setSellerInfo(loadSellerInfo());
 
-    // Fetch unread notifications count
     const tgId = String(
       (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id ??
       localStorage.getItem("tg_user_id") ?? ""
     );
+
     if (tgId) {
+      // Fetch unread notifications
       fetch(`/api/notifications?telegramId=${tgId}`)
         .then(r => r.json())
         .then(d => {
@@ -918,6 +921,31 @@ export default function Profile() {
           setUnreadCount(count);
         })
         .catch(() => {});
+
+      // ── AUTO-RESTORE: if localStorage was cleared, recover profile from DB ──
+      // This fixes the issue where store owners see "Register" after reopening Telegram
+      if (!storedProfile) {
+        fetch(`/api/users/me?tgId=${tgId}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(dbUser => {
+            if (dbUser?.firstName) {
+              const restored: UserProfile = {
+                firstName: dbUser.firstName,
+                lastName:  dbUser.lastName  ?? "",
+                phone:     dbUser.phone     ?? "",
+                avatar:    dbUser.avatar    ?? undefined,
+              };
+              saveProfile(restored);
+              setUser(restored);
+            }
+          })
+          .catch(() => {})
+          .finally(() => setRestoring(false));
+      } else {
+        setRestoring(false);
+      }
+    } else {
+      setRestoring(false);
     }
   }, []);
 
@@ -944,9 +972,16 @@ export default function Profile() {
     <MobileLayout hideNav={false} title="Profil">
 
       {/* ────────────────────────────────────────────────────
-          NOT REGISTERED state
+          RESTORING state — checking DB for existing profile
       ─────────────────────────────────────────────────── */}
-      {!user ? (
+      {restoring ? (
+        <div className="flex flex-col items-center justify-center pt-24 gap-4">
+          <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          </div>
+          <p className="text-sm text-muted-foreground font-medium">Ma'lumotlar yuklanmoqda...</p>
+        </div>
+      ) : !user ? (
         <div className="flex flex-col items-center px-6 pt-8 pb-10">
 
           {/* Hero illustration */}
