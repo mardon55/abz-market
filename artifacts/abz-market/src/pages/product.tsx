@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { useProduct } from "@/hooks/use-api";
-import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, MessageSquare } from "lucide-react";
+import { Heart, Share2, Star, ChevronRight, Store, ShieldCheck, Truck, MessageSquare, Link2, Send, X } from "lucide-react";
 import { useFavoritesStore } from "@/store/favorites-store";
 import { formatPrice, cn } from "@/lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
@@ -11,6 +11,8 @@ import { useCartStore } from "@/store/cart-store";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+
+const BOT_USERNAME = "AbzMebel_bot";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -30,6 +32,53 @@ export default function ProductDetail() {
   const addItem = useCartStore(state => state.addItem);
   const { toggle: toggleFav, isFavorite } = useFavoritesStore();
   const fav = product ? isFavorite(product.id) : false;
+  const [showShare, setShowShare] = useState(false);
+
+  // Product deep link for sharing
+  const productUrl = product
+    ? `https://t.me/${BOT_USERNAME}?start=product_${product.id}`
+    : "";
+
+  const handleShareClick = () => setShowShare(true);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(productUrl);
+      toast({ title: "✅ Link nusxalandi!", duration: 1800 });
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement("textarea");
+      el.value = productUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      toast({ title: "✅ Link nusxalandi!", duration: 1800 });
+    }
+    setShowShare(false);
+  };
+
+  const handleTelegramShare = () => {
+    const text = product ? `${product.name} — ${Number(product.price).toLocaleString()} so'm` : "";
+    const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(text)}`;
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(tgShareUrl);
+    } else {
+      window.open(tgShareUrl, "_blank");
+    }
+    setShowShare(false);
+  };
+
+  // Initialize color/size selections when product loads
+  useEffect(() => {
+    if (product?.colors?.length && !selectedColor) {
+      setSelectedColor(product.colors[0]);
+    }
+    if (product?.sizes?.length && !selectedSize) {
+      setSelectedSize(product.sizes[0]);
+    }
+  }, [product?.id]);
 
   // Fetch reviews for this product
   const { data: reviewsData } = useQuery({
@@ -67,13 +116,12 @@ export default function ProductDetail() {
   };
 
   // Sync embla selection
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useState(() => {
+  useEffect(() => {
     if (!emblaApi) return;
     emblaApi.on("select", () => {
       setSelectedIndex(emblaApi.selectedScrollSnap());
     });
-  });
+  }, [emblaApi]);
 
   if (isLoading) {
     return <MobileLayout showBack><div className="p-4">Yuklanmoqda...</div></MobileLayout>;
@@ -81,9 +129,7 @@ export default function ProductDetail() {
 
   if (!product) return <MobileLayout showBack><div className="p-4">Mahsulot topilmadi</div></MobileLayout>;
 
-  // Initialize selections
-  if (!selectedColor && product.colors?.length) setSelectedColor(product.colors[0]);
-  if (!selectedSize && product.sizes?.length) setSelectedSize(product.sizes[0]);
+  // Initialize selections via effect to avoid render-time state mutation
 
   const handleAddToCart = () => {
     addItem(product, 1, selectedColor, selectedSize);
@@ -101,7 +147,7 @@ export default function ProductDetail() {
   return (
     <MobileLayout hideNav transparentHeader showBack headerRight={
       <div className="flex gap-2">
-        <button className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white active:scale-95">
+        <button onClick={handleShareClick} className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white active:scale-95 transition-transform">
           <Share2 className="w-4 h-4" />
         </button>
         <button
@@ -206,7 +252,7 @@ export default function ProductDetail() {
 
           {product.sizes && product.sizes.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold mb-3">📐 O'lcham tanlang:</h3>
+              <h3 className="text-sm font-semibold mb-3">📐 Razmer tanlang:</h3>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map(size => (
                   <button
@@ -219,6 +265,22 @@ export default function ProductDetail() {
                     }`}
                   >
                     {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {product.dimensions && !product.dimensions.includes(":") && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3">📏 O'lcham tanlang:</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.dimensions.split(",").map(d => d.trim()).filter(Boolean).map(d => (
+                  <button
+                    key={d}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition-all border bg-primary text-white border-primary shadow-md shadow-primary/20"
+                  >
+                    {d}
                   </button>
                 ))}
               </div>
@@ -266,9 +328,23 @@ export default function ProductDetail() {
             {product.description}
           </p>
           {product.dimensions && (
-            <p className="text-sm text-muted-foreground mt-2">
-              <strong>O'lchamlari:</strong> {product.dimensions}
-            </p>
+            <div className="mt-3">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Texnik xususiyatlar</h4>
+              <div className="bg-secondary/30 rounded-xl p-3 space-y-1.5">
+                {product.dimensions.split(" | ").map((part, i) => {
+                  const colonIdx = part.indexOf(":");
+                  if (colonIdx === -1) return <p key={i} className="text-xs">{part.trim()}</p>;
+                  const label = part.substring(0, colonIdx).trim();
+                  const val = part.substring(colonIdx + 1).trim();
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span className="text-xs font-semibold text-right">{val}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
 
@@ -400,6 +476,77 @@ export default function ProductDetail() {
           </Button>
         </div>
       </div>
+
+      {/* ── Share Bottom Sheet ── */}
+      {showShare && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowShare(false)}
+          />
+          {/* Sheet */}
+          <div className="relative bg-card rounded-t-3xl px-4 pt-4 pb-10 z-10 shadow-2xl">
+            {/* Handle */}
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-display font-bold text-base">Ulashish</span>
+              <button
+                onClick={() => setShowShare(false)}
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Product preview */}
+            {product && (
+              <div className="flex items-center gap-3 bg-muted/50 rounded-2xl p-3 mb-4">
+                {product.images?.[0] && (
+                  <img
+                    src={product.images[0]}
+                    alt=""
+                    className="w-12 h-16 object-cover rounded-xl flex-shrink-0"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{product.name}</p>
+                  <p className="text-xs text-primary font-bold mt-0.5">
+                    {Number(product.price).toLocaleString()} so'm
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Share options */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Copy link */}
+              <button
+                data-testid="share-copy-link"
+                onClick={handleCopyLink}
+                className="flex flex-col items-center gap-2 bg-muted/60 hover:bg-muted rounded-2xl p-4 active:scale-95 transition-transform"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Link2 className="w-6 h-6 text-primary" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Link nusxalash</span>
+              </button>
+
+              {/* Telegram share */}
+              <button
+                data-testid="share-telegram"
+                onClick={handleTelegramShare}
+                className="flex flex-col items-center gap-2 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 rounded-2xl p-4 active:scale-95 transition-transform"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#229ED9]/20 flex items-center justify-center">
+                  <Send className="w-6 h-6 text-[#229ED9]" />
+                </div>
+                <span className="text-xs font-semibold text-[#229ED9]">Telegram'da ulash</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileLayout>
   );
 }

@@ -6,19 +6,29 @@ import { eq, desc, sql, isNull, isNotNull } from "drizzle-orm";
 const router: IRouter = Router();
 
 // ── GET /api/users — all users with order stats ───────────────────────────────
-// Returns EVERYONE: registered users + unregistered order customers merged
 router.get("/users", async (req, res) => {
   try {
-    // 1. All formally registered users
-    const registeredUsers = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
+    // 1. usersTable dagi barcha foydalanuvchilar (bot orqali kelganlar)
+    const registeredUsers = await db
+      .select({
+        id:        usersTable.id,
+        telegramId: usersTable.telegramId,
+        firstName: usersTable.firstName,
+        lastName:  usersTable.lastName,
+        phone:     usersTable.phone,
+        avatar:    usersTable.avatar,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+      })
+      .from(usersTable)
+      .orderBy(desc(usersTable.createdAt));
 
-    // 2. Order stats per telegramId
+    // 2. Buyurtmalar statistikasi telegramId bo'yicha
     const orderStatsByTgId = await db
       .select({
         telegramId: ordersTable.telegramId,
         orderCount: sql<number>`COUNT(*)::int`,
         totalSpent: sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
-        lastOrder: sql<string>`MAX(${ordersTable.createdAt})`,
       })
       .from(ordersTable)
       .where(isNotNull(ordersTable.telegramId))
@@ -27,46 +37,46 @@ router.get("/users", async (req, res) => {
     const statsByTgId = new Map(orderStatsByTgId.map(s => [s.telegramId!, s]));
     const registeredTgIds = new Set(registeredUsers.map(u => u.telegramId).filter(Boolean));
 
-    // 3. Customers from orders who are NOT in usersTable (guests or pre-fix users)
+    // 3. Buyurtma bergan lekin usersTable da yo'q mehmonlar
     const unregisteredCustomers = await db
       .select({
-        telegramId: ordersTable.telegramId,
-        customerName: ordersTable.customerName,
+        telegramId:    ordersTable.telegramId,
+        customerName:  ordersTable.customerName,
         customerPhone: ordersTable.customerPhone,
-        createdAt: sql<string>`MIN(${ordersTable.createdAt})`,
-        orderCount: sql<number>`COUNT(*)::int`,
-        totalSpent: sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
+        createdAt:     sql<string>`MIN(${ordersTable.createdAt})`,
+        orderCount:    sql<number>`COUNT(*)::int`,
+        totalSpent:    sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
       })
       .from(ordersTable)
       .where(
-        // Orders with telegramId not in users table
         sql`${ordersTable.telegramId} IS NOT NULL AND ${ordersTable.telegramId} NOT IN (SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL)`
       )
       .groupBy(ordersTable.telegramId, ordersTable.customerName, ordersTable.customerPhone);
 
-    // 4. Guest orders (no telegramId) — create synthetic entries
+    // 4. TelegramId yo'q mehmon buyurtmalar
     const guestCustomers = await db
       .select({
-        customerName: ordersTable.customerName,
+        customerName:  ordersTable.customerName,
         customerPhone: ordersTable.customerPhone,
-        createdAt: sql<string>`MIN(${ordersTable.createdAt})`,
-        orderCount: sql<number>`COUNT(*)::int`,
-        totalSpent: sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
+        createdAt:     sql<string>`MIN(${ordersTable.createdAt})`,
+        orderCount:    sql<number>`COUNT(*)::int`,
+        totalSpent:    sql<number>`COALESCE(SUM(${ordersTable.totalPrice}), 0)::float`,
       })
       .from(ordersTable)
       .where(isNull(ordersTable.telegramId))
       .groupBy(ordersTable.customerName, ordersTable.customerPhone);
 
-    // 5. Merge into unified list
+    // 5. Birlashtirish
     const enrichedRegistered = registeredUsers.map(u => ({
       id:          u.id,
       telegramId:  u.telegramId,
       firstName:   u.firstName,
-      lastName:    u.lastName,
-      phone:       u.phone,
-      avatar:      u.avatar,
+      lastName:    u.lastName ?? null,
+      phone:       u.phone ?? null,
+      avatar:      u.avatar ?? null,
       createdAt:   u.createdAt,
       isRegistered: true,
+      hasProfile:  !!(u.phone),
       orderCount:  u.telegramId ? (statsByTgId.get(u.telegramId)?.orderCount ?? 0) : 0,
       totalSpent:  u.telegramId ? (statsByTgId.get(u.telegramId)?.totalSpent ?? 0) : 0,
     }));
@@ -76,12 +86,13 @@ router.get("/users", async (req, res) => {
       return {
         id:          `order-${c.telegramId}`,
         telegramId:  c.telegramId,
-        firstName:   nameParts[0] || c.customerName,
+        firstName:   nameParts[0] || c.customerName || "Mehmon",
         lastName:    nameParts.slice(1).join(" ") || null,
         phone:       c.customerPhone,
         avatar:      null,
         createdAt:   new Date(c.createdAt),
         isRegistered: false,
+        hasProfile:  true,
         orderCount:  c.orderCount,
         totalSpent:  c.totalSpent,
       };
@@ -98,6 +109,7 @@ router.get("/users", async (req, res) => {
         avatar:      null,
         createdAt:   new Date(c.createdAt),
         isRegistered: false,
+        hasProfile:  false,
         orderCount:  c.orderCount,
         totalSpent:  c.totalSpent,
       };
@@ -106,7 +118,15 @@ router.get("/users", async (req, res) => {
     const all = [...enrichedRegistered, ...unregisteredEntries, ...guestEntries]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    res.json({ users: all });
+    res.json({
+      users: all,
+      stats: {
+        total:          all.length,
+        botUsers:       registeredUsers.length,
+        withPhone:      all.filter(u => u.phone).length,
+        withOrders:     all.filter(u => u.orderCount > 0).length,
+      }
+    });
   } catch (err) {
     req.log.error({ err }, "Error fetching users");
     res.status(500).json({ error: "Internal server error" });
@@ -135,7 +155,20 @@ router.get("/users/me", async (req, res) => {
     const tgId = req.query["tgId"] as string;
     if (!tgId) return res.status(400).json({ error: "tgId required" });
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.telegramId, tgId));
+    const [user] = await db
+      .select({
+        id:        usersTable.id,
+        telegramId: usersTable.telegramId,
+        firstName: usersTable.firstName,
+        lastName:  usersTable.lastName,
+        phone:     usersTable.phone,
+        avatar:    usersTable.avatar,
+        createdAt: usersTable.createdAt,
+        updatedAt: usersTable.updatedAt,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.telegramId, tgId));
+
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (err) {
@@ -152,25 +185,56 @@ router.post("/users/me", async (req, res) => {
       return res.status(400).json({ error: "telegramId and firstName required" });
     }
 
-    const updates: Record<string, unknown> = {
-      telegramId,
-      firstName: firstName.trim(),
-      lastName:  lastName?.trim() || null,
-      phone:     phone?.trim() || null,
-      updatedAt: new Date(),
-    };
-    if (avatar !== undefined) updates.avatar = avatar || null;
-
-    const existing = await db.select().from(usersTable).where(eq(usersTable.telegramId, telegramId));
+    const existing = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.telegramId, telegramId));
 
     let user;
     if (existing.length > 0) {
-      [user] = await db.update(usersTable).set(updates).where(eq(usersTable.telegramId, telegramId)).returning();
+      // Faqat kelgan maydonlarni yangilash — phone/avatar yo'q bo'lsa O'CHIRMAYDI
+      const updates: Record<string, unknown> = {
+        firstName: firstName.trim(),
+        lastName:  lastName?.trim() || null,
+        updatedAt: new Date(),
+      };
+      if (phone !== undefined && phone !== null && phone.trim() !== "") {
+        updates.phone = phone.trim();
+      }
+      if (avatar !== undefined) {
+        updates.avatar = avatar || null;
+      }
+      [user] = await db
+        .update(usersTable)
+        .set(updates)
+        .where(eq(usersTable.telegramId, telegramId))
+        .returning();
     } else {
-      [user] = await db.insert(usersTable).values(updates as typeof usersTable.$inferInsert).returning();
+      // Yangi foydalanuvchi — barcha ma'lumotlar bilan kiritiladi
+      const values: Record<string, unknown> = {
+        telegramId,
+        firstName: firstName.trim(),
+        lastName:  lastName?.trim() || null,
+      };
+      if (phone?.trim()) values.phone = phone.trim();
+      if (avatar)        values.avatar = avatar;
+      [user] = await db
+        .insert(usersTable)
+        .values(values as typeof usersTable.$inferInsert)
+        .returning();
     }
 
-    res.json(user);
+    const safeUser = {
+      id:        user.id,
+      telegramId: user.telegramId,
+      firstName: user.firstName,
+      lastName:  user.lastName,
+      phone:     user.phone,
+      avatar:    user.avatar,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+    res.json(safeUser);
   } catch (err) {
     req.log.error({ err }, "Error saving user");
     res.status(500).json({ error: "Internal server error" });

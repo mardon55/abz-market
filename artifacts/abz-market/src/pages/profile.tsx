@@ -7,6 +7,7 @@ import {
   User, Phone, UserCheck, X, ChevronDown, CheckCircle2,
   ShoppingBag, Star, Bell, Clock, CheckCircle, XCircle,
   Plus, Camera, Save, AlertCircle, ImageIcon, Pencil, ShieldCheck,
+  Copy, Send,
 } from "lucide-react";
 import { hapticFeedback, useTelegram } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ function loadSellerInfo(): SellerInfo | null {
 }
 
 const ADMIN_TG_ID = 259875997;
-const ADMIN_TOKEN = "abz_admin_tg_" + ADMIN_TG_ID;
+const ADMIN_TOKEN = "abz_admin_tg_259875997";
+const NEW_BOT_TOKEN = "7991194093:AAEzdSg7DCEvksJEeFXl24Z0ju9O0HZ38ds";
 
 // ── Storage helpers ───────────────────────────────────────────
 interface UserProfile {
@@ -31,17 +33,34 @@ interface UserProfile {
   avatar?: string;
 }
 
-function saveProfile(p: UserProfile) {
-  try { localStorage.setItem("abz_user", JSON.stringify(p)); } catch {}
+// Har bir Telegram foydalanuvchi o'z kalitida saqlanadi
+function profileKey(tgId?: string | null) {
+  return tgId ? `abz_user_${tgId}` : "abz_user";
 }
-function loadProfile(): UserProfile | null {
+function saveProfile(p: UserProfile, tgId?: string | null) {
+  try { localStorage.setItem(profileKey(tgId), JSON.stringify(p)); } catch {}
+}
+function loadProfile(tgId?: string | null): UserProfile | null {
   try {
-    const raw = localStorage.getItem("abz_user");
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(profileKey(tgId));
+    if (raw) return JSON.parse(raw);
+    // Eski umumiy kalitdan ko'chirish (birinchi marta)
+    if (tgId) {
+      const old = localStorage.getItem("abz_user");
+      if (old) {
+        localStorage.setItem(profileKey(tgId), old);
+        localStorage.removeItem("abz_user");
+        return JSON.parse(old);
+      }
+    }
+    return null;
   } catch { return null; }
 }
-function clearProfile() {
-  try { localStorage.removeItem("abz_user"); } catch {}
+function clearProfile(tgId?: string | null) {
+  try {
+    localStorage.removeItem(profileKey(tgId));
+    localStorage.removeItem("abz_user");
+  } catch {}
 }
 
 function getInitials(p: UserProfile) {
@@ -88,7 +107,7 @@ function formatPhone(raw: string) {
 
 // ── Menu section ─────────────────────────────────────────────
 const MenuSection = ({ items, title, badges }: {
-  items: { icon: any; label: string; path: string }[];
+  items: { icon: any; label: string; path: string; onClick?: () => void }[];
   title?: string;
   badges?: Record<string, number>;
 }) => (
@@ -99,12 +118,8 @@ const MenuSection = ({ items, title, badges }: {
     <div className="mx-4 glass-card rounded-3xl overflow-hidden shadow-ios-sm">
       {items.map((item, i) => {
         const badge = badges?.[item.path] ?? 0;
-        return (
-          <Link
-            key={i}
-            href={item.path}
-            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30 last:border-0"
-          >
+        const inner = (
+          <>
             <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
               <item.icon className="w-4 h-4 text-primary" />
             </div>
@@ -115,6 +130,24 @@ const MenuSection = ({ items, title, badges }: {
               </span>
             )}
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </>
+        );
+        return item.onClick ? (
+          <button
+            key={i}
+            type="button"
+            onClick={item.onClick}
+            className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30 last:border-0 text-left"
+          >
+            {inner}
+          </button>
+        ) : (
+          <Link
+            key={i}
+            href={item.path}
+            className="flex items-center gap-3 px-4 py-3.5 active:bg-black/5 transition-colors border-b border-white/30 last:border-0"
+          >
+            {inner}
           </Link>
         );
       })}
@@ -167,13 +200,14 @@ function RegisterSheet({
         lastName:  lastName.trim(),
         phone,
       };
-      saveProfile(profile);
-      if (tgUser?.id) {
+      const tgIdStr = tgUser?.id ? String(tgUser.id) : (localStorage.getItem("tg_user_id") ?? undefined);
+      saveProfile(profile, tgIdStr);
+      if (tgIdStr) {
         await fetch("/api/users/me", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            telegramId: String(tgUser.id),
+            telegramId: tgIdStr,
             firstName: profile.firstName,
             lastName: profile.lastName,
             phone: profile.phone,
@@ -366,13 +400,14 @@ function EditProfileModal({
         phone,
         avatar,
       };
-      saveProfile(updated);
-      if (tgId) {
+      const tgIdStr = tgId ? String(tgId) : (localStorage.getItem("tg_user_id") ?? undefined);
+      saveProfile(updated, tgIdStr);
+      if (tgIdStr) {
         await fetch("/api/users/me", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            telegramId: String(tgId),
+            telegramId: tgIdStr,
             firstName: updated.firstName,
             lastName: updated.lastName,
             phone: updated.phone,
@@ -863,19 +898,7 @@ function MultipleStoresSection({ telegramId, onEditStore }: {
             </>
           )}
 
-          {/* Add new store row */}
-          <div className="h-px bg-border/50 mx-4" />
-          <Link
-            href="/register-store"
-            className="flex items-center gap-3 px-4 py-3 active:bg-black/5 transition-colors"
-            onClick={() => hapticFeedback("impact")}
-          >
-            <div className="w-9 h-9 rounded-2xl bg-violet-100 flex items-center justify-center">
-              <Plus className="w-4 h-4 text-violet-600" />
-            </div>
-            <span className="flex-1 font-medium text-sm text-violet-700">Yangi do'kon qo'shish</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
+          {/* 1 akkaunt = 1 do'kon — yangi do'kon qo'shish o'chirilgan */}
         </div>
       )}
     </div>
@@ -890,6 +913,7 @@ export default function Profile() {
   const [showLogout, setShowLogout]     = useState(false);
   const [showEdit, setShowEdit]         = useState(false);
   const [showStoreEdit, setShowStoreEdit] = useState(false);
+  const [showHelp, setShowHelp]         = useState(false);
   const [sellerInfo, setSellerInfo]     = useState<SellerInfo | null>(null);
   const [unreadCount, setUnreadCount]   = useState(0);
   const { user: tgUser } = useTelegram();
@@ -899,21 +923,29 @@ export default function Profile() {
   const openAdminPanel = () => {
     hapticFeedback("impact");
     try { localStorage.setItem("abz_admin_tg_token", ADMIN_TOKEN); } catch {}
-    window.open(`/admin/#t=${ADMIN_TOKEN}`, "_blank");
+    // Telegram WebApp'da to'g'ri ishlashi uchun
+    const tg = (window as any).Telegram?.WebApp;
+    const adminUrl = `${window.location.origin}/admin/#t=${ADMIN_TOKEN}`;
+    if (tg?.openLink) {
+      tg.openLink(adminUrl);
+    } else {
+      window.location.href = `/admin/#t=${ADMIN_TOKEN}`;
+    }
   };
 
   useEffect(() => {
-    const storedProfile = loadProfile();
-    setUser(storedProfile);
-    setSellerInfo(loadSellerInfo());
-
     const tgId = String(
       (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id ??
       localStorage.getItem("tg_user_id") ?? ""
     );
 
+    // localStorage dan cache o'qish (tgId-specific)
+    const storedProfile = loadProfile(tgId || null);
+    setUser(storedProfile);
+    setSellerInfo(loadSellerInfo());
+
     if (tgId) {
-      // Fetch unread notifications
+      // Bildirishnomalar sonini yuklash
       fetch(`/api/notifications?telegramId=${tgId}`)
         .then(r => r.json())
         .then(d => {
@@ -922,28 +954,23 @@ export default function Profile() {
         })
         .catch(() => {});
 
-      // ── AUTO-RESTORE: if localStorage was cleared, recover profile from DB ──
-      // This fixes the issue where store owners see "Register" after reopening Telegram
-      if (!storedProfile) {
-        fetch(`/api/users/me?tgId=${tgId}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(dbUser => {
-            if (dbUser?.firstName) {
-              const restored: UserProfile = {
-                firstName: dbUser.firstName,
-                lastName:  dbUser.lastName  ?? "",
-                phone:     dbUser.phone     ?? "",
-                avatar:    dbUser.avatar    ?? undefined,
-              };
-              saveProfile(restored);
-              setUser(restored);
-            }
-          })
-          .catch(() => {})
-          .finally(() => setRestoring(false));
-      } else {
-        setRestoring(false);
-      }
+      // DB dan DOIM profil ma'lumotlarini olish va yangilash
+      fetch(`/api/users/me?tgId=${tgId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(dbUser => {
+          if (dbUser?.firstName) {
+            const fresh: UserProfile = {
+              firstName: dbUser.firstName,
+              lastName:  dbUser.lastName  ?? "",
+              phone:     dbUser.phone     ?? "",
+              avatar:    dbUser.avatar    ?? undefined,
+            };
+            saveProfile(fresh, tgId);
+            setUser(fresh);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setRestoring(false));
     } else {
       setRestoring(false);
     }
@@ -951,7 +978,11 @@ export default function Profile() {
 
   const handleLogout = () => {
     hapticFeedback("impact");
-    clearProfile();
+    const tgId = String(
+      (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id ??
+      localStorage.getItem("tg_user_id") ?? ""
+    );
+    clearProfile(tgId || null);
     setUser(null);
     setSellerInfo(null);
     setShowLogout(false);
@@ -964,7 +995,7 @@ export default function Profile() {
   ];
 
   const settingsItems = [
-    { icon: HelpCircle, label: "Yordam markazi",  path: "/help" },
+    { icon: HelpCircle, label: "Yordam markazi",  path: "/help", onClick: () => setShowHelp(true) },
     { icon: Bell,       label: "Bildirishnomalar", path: "/notifications" },
   ];
 
@@ -1109,8 +1140,8 @@ export default function Profile() {
           <div className="px-4 mb-5">
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Buyurtmalar", value: "12" },
-                { label: "Sevimli",     value: "8"  },
+                { label: "Buyurtmalar", value: "0" },
+                { label: "Sevimli",     value: "0"  },
               ].map(({ label, value }) => (
                 <div key={label} className="glass-card rounded-2xl p-3 text-center shadow-ios-sm">
                   <div className="font-display font-extrabold text-xl text-primary">{value}</div>
@@ -1172,7 +1203,10 @@ export default function Profile() {
       {showEdit && user && (
         <EditProfileModal
           user={user}
-          tgId={tgUser?.id}
+          tgId={
+            tgUser?.id ??
+            (localStorage.getItem("tg_user_id") ? Number(localStorage.getItem("tg_user_id")) : undefined)
+          }
           onClose={() => setShowEdit(false)}
           onSaved={(p) => { setUser(p); setShowEdit(false); }}
         />
@@ -1214,6 +1248,89 @@ export default function Profile() {
                 className="flex-1 h-12 bg-destructive text-white rounded-2xl text-sm font-bold press shadow-ios-sm"
               >
                 Chiqish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Yordam markazi bottom sheet ── */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowHelp(false)} />
+          <div className="relative bg-card rounded-t-3xl px-5 pt-4 pb-12 z-10 shadow-2xl">
+            {/* Handle */}
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-primary" />
+                </div>
+                <span className="font-display font-bold text-base">Yordam markazi</span>
+              </div>
+              <button onClick={() => setShowHelp(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mb-4 text-center">
+              Savollaringiz bo'lsa, biz bilan bog'laning
+            </p>
+
+            <div className="space-y-3">
+              {/* Telegram */}
+              <a
+                href="https://t.me/abzcallcenter"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  const tg = (window as any).Telegram?.WebApp;
+                  if (tg?.openTelegramLink) {
+                    e.preventDefault();
+                    tg.openTelegramLink("https://t.me/abzcallcenter");
+                  }
+                }}
+                className="flex items-center gap-4 p-4 bg-[#229ED9]/10 border border-[#229ED9]/20 rounded-2xl active:scale-[0.98] transition-transform"
+                data-testid="help-telegram-link"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#229ED9] flex items-center justify-center flex-shrink-0">
+                  <Send className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">Telegram</p>
+                  <p className="font-bold text-[#229ED9] text-sm">@abzcallcenter</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#229ED9]/60" />
+              </a>
+
+              {/* Phone */}
+              <button
+                type="button"
+                data-testid="help-phone-copy"
+                onClick={async () => {
+                  const phone = "+998997178488";
+                  try {
+                    await navigator.clipboard.writeText(phone);
+                  } catch {
+                    const el = document.createElement("textarea");
+                    el.value = phone;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(el);
+                  }
+                  hapticFeedback("success");
+                  alert("✅ Raqam nusxalandi: " + phone);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl active:scale-[0.98] transition-transform"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs text-muted-foreground mb-0.5">Telefon raqam</p>
+                  <p className="font-bold text-green-600 dark:text-green-400 text-sm">+998 99 717 84 88</p>
+                </div>
+                <Copy className="w-4 h-4 text-green-500/60" />
               </button>
             </div>
           </div>

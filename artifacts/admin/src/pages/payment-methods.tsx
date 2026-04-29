@@ -276,6 +276,19 @@ export default function PaymentMethods() {
 
   return (
     <div>
+      {/* Coming soon banner */}
+      <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+          <CreditCard className="w-6 h-6 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-bold text-amber-800 text-base mb-1">Bu bo'lim ishlab chiqilmoqda</h3>
+          <p className="text-sm text-amber-700">
+            To'lov usullari bo'limi hozirda ishlanmoqda. Tez orada karta orqali to'lov va bo'lib to'lash imkoniyatlari qo'shiladi.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>

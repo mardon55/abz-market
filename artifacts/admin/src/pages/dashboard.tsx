@@ -177,13 +177,13 @@ export default function Dashboard() {
   const { data: summary, isLoading: sumLoading, refetch: refetchSum } = useQuery({
     queryKey: ["admin-summary", period],
     queryFn: () => fetchSummary(period),
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
   });
 
   const { data: chartRaw, isLoading: chartLoading } = useQuery({
     queryKey: ["admin-chart", period],
     queryFn: () => fetchChart(period),
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
   });
 
   const chartData: { label: string; revenue: number; orders: number }[] = chartRaw?.data ?? [];

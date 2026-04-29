@@ -71,9 +71,6 @@ export default function Stores() {
                       {store.productCount ?? 0} ta mahsulot
                     </span>
                   </div>
-                  {store.location && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{store.location}</p>
-                  )}
                 </div>
 
                 <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />

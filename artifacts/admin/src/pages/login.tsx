@@ -79,7 +79,7 @@ export default function Login({ onLogin }: Props) {
           <div className="pt-2 border-t border-white/10">
             <div className="flex items-start gap-2 text-white/40 text-[11px]">
               <ShieldOff className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>Faqat admin huquqiga ega Telegram ID bilan kirish mumkin: <span className="font-mono text-white/60">{ADMIN_ID}</span></span>
+              <span>Faqat admin huquqiga ega Telegram ID bilan kirish mumkin</span>
             </div>
           </div>
         </div>

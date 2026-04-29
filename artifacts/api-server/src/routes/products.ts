@@ -1,9 +1,23 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { productsTable, categoriesTable, storesTable } from "@workspace/db/schema";
-import { eq, ilike, gte, lte, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, ilike, gte, lte, and, or, desc, sql, inArray, count } from "drizzle-orm";
 
 const router: IRouter = Router();
+
+// ── Helper: sync real product count to stores table ──────────────────────────
+async function syncProductCount(storeId: string): Promise<void> {
+  try {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(productsTable)
+      .where(eq(productsTable.storeId, storeId));
+    await db
+      .update(storesTable)
+      .set({ productCount: Number(total) })
+      .where(eq(storesTable.id, storeId));
+  } catch { /* silent — not critical */ }
+}
 
 const PRODUCT_SELECT = {
   id: productsTable.id,
@@ -37,15 +51,14 @@ router.get("/products", async (req, res) => {
   try {
     const {
       categoryId, search, minPrice, maxPrice, storeId, featured,
-      status, limit = "20", offset = "0",
+      status, limit = "20", offset = "0", newOnly, sortBy,
     } = req.query as Record<string, string>;
 
     const conditions = [];
 
     // Status filtering: default = approved only (for mini app customers)
-    // admin can pass status=pending, status=rejected, status=all
     if (status === "all") {
-      // no status filter — show everything
+      // no filter
     } else if (status === "pending") {
       conditions.push(eq(productsTable.status, "pending"));
     } else if (status === "rejected") {
@@ -54,8 +67,13 @@ router.get("/products", async (req, res) => {
       conditions.push(eq(productsTable.status, "approved"));
     }
 
+    // New arrivals: last 24 hours
+    if (newOnly === "true") {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      conditions.push(gte(productsTable.createdAt, since));
+    }
+
     if (categoryId) {
-      // Check if this is a parent category — if so, include all subcategory products too
       const catRow = await db
         .select({ parentId: categoriesTable.parentId })
         .from(categoriesTable)
@@ -63,26 +81,58 @@ router.get("/products", async (req, res) => {
         .limit(1);
 
       if (catRow.length > 0 && catRow[0].parentId === null) {
-        // It's a parent: get all child IDs
         const subs = await db
           .select({ id: categoriesTable.id })
           .from(categoriesTable)
           .where(eq(categoriesTable.parentId, categoryId));
-
         const allIds = [categoryId, ...subs.map((s) => s.id)];
         conditions.push(inArray(productsTable.categoryId, allIds));
       } else {
-        // It's a subcategory or unknown: filter directly
         conditions.push(eq(productsTable.categoryId, categoryId));
       }
     }
     if (storeId) conditions.push(eq(productsTable.storeId, storeId));
-    if (search) conditions.push(ilike(productsTable.name, `%${search}%`));
+    if (search) {
+      // Kategoriya nomida ham qidiramiz (parent va sub)
+      const matchingCats = await db
+        .select({ id: categoriesTable.id, parentId: categoriesTable.parentId })
+        .from(categoriesTable)
+        .where(ilike(categoriesTable.name, `%${search}%`));
+
+      // Topilgan kategoriyalar va ularning sub-kategoriyalari
+      const parentIds = matchingCats.filter(c => c.parentId === null).map(c => c.id);
+      let catIds = matchingCats.map(c => c.id);
+
+      if (parentIds.length > 0) {
+        const subCats = await db
+          .select({ id: categoriesTable.id })
+          .from(categoriesTable)
+          .where(inArray(categoriesTable.parentId, parentIds));
+        catIds = [...new Set([...catIds, ...subCats.map(s => s.id)])];
+      }
+
+      if (catIds.length > 0) {
+        conditions.push(
+          or(
+            ilike(productsTable.name, `%${search}%`),
+            inArray(productsTable.categoryId, catIds)
+          )!
+        );
+      } else {
+        conditions.push(ilike(productsTable.name, `%${search}%`));
+      }
+    }
     if (minPrice) conditions.push(gte(productsTable.price, minPrice));
     if (maxPrice) conditions.push(lte(productsTable.price, maxPrice));
     if (featured === "true") conditions.push(eq(productsTable.isFeatured, true));
+    if (req.query["isTopSelling"] === "true") conditions.push(eq(productsTable.isTopSelling, true));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Sorting
+    const order = sortBy === "createdAt"
+      ? desc(productsTable.createdAt)
+      : desc(productsTable.salesCount);
 
     const products = await db
       .select(PRODUCT_SELECT)
@@ -90,7 +140,7 @@ router.get("/products", async (req, res) => {
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
       .where(where)
-      .orderBy(desc(productsTable.salesCount))
+      .orderBy(order)
       .limit(parseInt(limit))
       .offset(parseInt(offset));
 
@@ -118,8 +168,8 @@ router.post("/products", async (req, res) => {
       return res.status(400).json({ error: "name, price and storeId are required" });
     }
 
-    // Sellers submit with status='pending'; admin-added products default to 'approved'
-    const productStatus = status === "pending" ? "pending" : "approved";
+    // Barcha seller mahsulotlari admin tasdiqini kutadi (pending)
+    const productStatus = "pending";
 
     const [product] = await db
       .insert(productsTable)
@@ -152,6 +202,8 @@ router.post("/products", async (req, res) => {
       .where(eq(productsTable.id, product.id));
 
     res.status(201).json(full);
+    // Sync store product count in background
+    syncProductCount(String(storeId));
   } catch (err) {
     req.log.error({ err }, "Error creating product");
     res.status(500).json({ error: "Internal server error" });
@@ -224,6 +276,8 @@ router.patch("/products/:id", async (req, res) => {
       .where(eq(productsTable.id, updated.id));
 
     res.json(full);
+    // Sync store product count if storeId is known
+    if (full?.storeId) syncProductCount(full.storeId);
   } catch (err) {
     req.log.error({ err }, "Error updating product");
     res.status(500).json({ error: "Internal server error" });
@@ -265,8 +319,15 @@ router.post("/products/:id/rate", async (req, res) => {
 router.delete("/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    // Get storeId before deleting (for productCount sync)
+    const [toDelete] = await db
+      .select({ storeId: productsTable.storeId })
+      .from(productsTable)
+      .where(eq(productsTable.id, id));
     await db.delete(productsTable).where(eq(productsTable.id, id));
     res.status(204).end();
+    // Sync store product count
+    if (toDelete?.storeId) syncProductCount(toDelete.storeId);
   } catch (err) {
     req.log.error({ err }, "Error deleting product");
     res.status(500).json({ error: "Internal server error" });

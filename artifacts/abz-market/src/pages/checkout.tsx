@@ -83,7 +83,8 @@ function MiniCard({ card, selected, onClick }: { card: PaymentCard; selected: bo
 // ── Schema ─────────────────────────────────────────────────────────────────────
 const checkoutSchema = z.object({
   customerName:  z.string().min(3, "Ism kamida 3ta harfdan iborat bo'lishi kerak"),
-  customerPhone: z.string().min(9, "To'g'ri telefon raqam kiriting"),
+  customerPhone: z.string()
+    .regex(/^\+998\d{9}$/, "To'g'ri raqam kiriting: +998 XX XXX XX XX"),
   address:       z.string().min(3, "Manzilni to'liq kiriting"),
   comment:       z.string().optional(),
   paymentMethod: z.enum(["cash", "card", "installment"]),
@@ -97,6 +98,52 @@ const PAYMENT_METHODS = [
 ];
 
 // ── Manual address form ────────────────────────────────────────────────────────
+// ── PhoneInput — +998 prefix fixed ────────────────────────────────────────────
+interface PhoneInputProps {
+  value: string;
+  onChange: (fullPhone: string) => void;
+  className?: string;
+  error?: string;
+}
+function PhoneInput({ value, onChange, className, error }: PhoneInputProps) {
+  // Extract digits after +998 from stored value
+  const digits = value.startsWith("+998") ? value.slice(4) : value.replace(/^\+?998/, "");
+  // Format: "901234567" → "90 123 45 67"
+  const formatted = digits
+    .replace(/\D/g, "")
+    .slice(0, 9)
+    .replace(/^(\d{2})(\d{3})(\d{2})(\d{2})$/, "$1 $2 $3 $4")
+    .replace(/^(\d{2})(\d{3})(\d{2})$/, "$1 $2 $3")
+    .replace(/^(\d{2})(\d{3})$/, "$1 $2")
+    .replace(/^(\d{2})(\d{1,3})$/, "$1 $2")
+    .replace(/^(\d{1,2})$/, "$1");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 9);
+    onChange(raw.length > 0 ? `+998${raw}` : "+998");
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className={`flex items-center rounded-xl h-11 border bg-white/30 border-white/30 overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30 ${error ? "border-destructive" : ""} ${className ?? ""}`}>
+        <span className="px-3 text-sm font-bold text-foreground/80 select-none bg-white/20 h-full flex items-center border-r border-white/30">
+          +998
+        </span>
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={formatted}
+          onChange={handleChange}
+          placeholder="90 123 45 67"
+          className="flex-1 h-full px-3 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+        />
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+
 interface ManualAddr {
   city: string; street: string; district: string; house: string; phone: string;
 }
@@ -207,7 +254,11 @@ export default function Checkout() {
     try {
       const profile = JSON.parse(localStorage.getItem("abz_user_profile") ?? "{}");
       if (profile.firstName) setValue("customerName", `${profile.firstName} ${profile.lastName ?? ""}`.trim());
-      if (profile.phone) setValue("customerPhone", profile.phone);
+      if (profile.phone) {
+        const raw = profile.phone.replace(/\D/g, "");
+        const digits = raw.startsWith("998") ? raw.slice(3) : raw;
+        setValue("customerPhone", digits.length === 9 ? `+998${digits}` : profile.phone);
+      }
     } catch {}
   }, []);
 
@@ -307,26 +358,22 @@ export default function Checkout() {
             {!showCustom && deliveryMethod === "delivery" && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground">Telefon raqam</Label>
-                <Input
-                  type="tel"
-                  {...register("customerPhone")}
-                  placeholder="+998 90 123 45 67"
-                  className="rounded-xl h-11 bg-white/30 border-white/30 focus:border-primary/50"
+                <PhoneInput
+                  value={watch("customerPhone") ?? ""}
+                  onChange={(v) => setValue("customerPhone", v, { shouldValidate: true })}
+                  error={errors.customerPhone?.message}
                 />
-                {errors.customerPhone && <p className="text-xs text-destructive">{errors.customerPhone.message}</p>}
               </div>
             )}
 
             {deliveryMethod === "pickup" && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-muted-foreground">Telefon raqam</Label>
-                <Input
-                  type="tel"
-                  {...register("customerPhone")}
-                  placeholder="+998 90 123 45 67"
-                  className="rounded-xl h-11 bg-white/30 border-white/30 focus:border-primary/50"
+                <PhoneInput
+                  value={watch("customerPhone") ?? ""}
+                  onChange={(v) => setValue("customerPhone", v, { shouldValidate: true })}
+                  error={errors.customerPhone?.message}
                 />
-                {errors.customerPhone && <p className="text-xs text-destructive">{errors.customerPhone.message}</p>}
               </div>
             )}
           </div>
@@ -515,12 +562,10 @@ export default function Checkout() {
                     <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                       <Phone className="w-3.5 h-3.5" /> Telefon raqami
                     </Label>
-                    <Input
-                      type="tel"
+                    <PhoneInput
                       value={manualAddr.phone}
-                      onChange={e => updateManual("phone", e.target.value)}
-                      placeholder="+998 90 123 45 67"
-                      className="rounded-xl h-11 bg-white/30 border-white/30 focus:border-primary/50"
+                      onChange={(v) => updateManual("phone", v)}
+                      error={errors.customerPhone?.message}
                     />
                   </div>
 
@@ -664,31 +709,14 @@ export default function Checkout() {
               ))}
             </div>
 
-            {paymentMethod === "card" && adminCards.length > 0 && (
-              <div className="mt-1 pt-3 border-t border-white/20">
-                <p className="text-xs font-semibold text-muted-foreground mb-2.5">Kartani tanlang:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {adminCards.map((card) => (
-                    <MiniCard key={card.id} card={card} selected={selectedCard === card.id} onClick={() => setSelectedCard(card.id)} />
-                  ))}
-                </div>
-                {!selectedCard && <p className="text-xs text-amber-600 mt-2 font-medium">⚠️ Karta tanlanmagan</p>}
-              </div>
-            )}
-
-            {paymentMethod === "card" && adminCards.length === 0 && (
+            {(paymentMethod === "card" || paymentMethod === "installment") && (
               <div className="mt-1 pt-3 border-t border-white/20">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-amber-600 shrink-0" />
-                  <p className="text-xs text-amber-700">Hozircha karta to'lov usuli mavjud emas.</p>
-                </div>
-              </div>
-            )}
-
-            {paymentMethod === "installment" && (
-              <div className="mt-1 pt-3 border-t border-white/20">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                  <p className="text-xs text-blue-700 font-medium">📋 Qo'shimcha hujjatlar talab etiladi. Operatorimiz siz bilan bog'lanadi.</p>
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="text-xs text-amber-700 font-semibold">Bu bo'lim ishlab chiqilmoqda</p>
+                    <p className="text-[11px] text-amber-600 mt-0.5">Hozircha faqat naqd pul orqali buyurtma bering</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -712,7 +740,7 @@ export default function Checkout() {
             {items.map((item) => (
               <div key={item.product.id} className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground truncate max-w-[60%]">{item.product.name} × {item.quantity}</span>
-                <span className="font-semibold">{formatPrice(item.product.price * item.quantity)}</span>
+                <span className="font-semibold">{formatPrice(Number(item.product.price) * item.quantity)}</span>
               </div>
             ))}
             {/* Delivery row */}
@@ -755,7 +783,8 @@ export default function Checkout() {
           form="checkout-form"
           disabled={
             createOrder.isPending ||
-            (paymentMethod === "card" && adminCards.length > 0 && !selectedCard) ||
+            paymentMethod === "card" ||
+            paymentMethod === "installment" ||
             (deliveryMethod === "pickup" && pickupPoints.length > 0 && !selectedPointId)
           }
           className="w-full h-14 rounded-2xl font-bold shadow-lg shadow-primary/25 text-base"

@@ -1,15 +1,17 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, orderItemsTable, productsTable, storesTable, usersTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { CreateOrderBody, UpdateOrderStatusBody } from "@workspace/api-zod";
 import { createNotification } from "./notifications";
 
 const ORDER_STATUS_MAP: Record<string, { title: string; body: string }> = {
-  processing: { title: "Buyurtma qabul qilindi ✅", body: "Buyurtmangiz ishlov berilmoqda." },
-  ready:      { title: "Buyurtma tayyor! 🎉",       body: "Buyurtmangiz olib ketishga yoki yetkazib berishga tayyor." },
-  delivered:  { title: "Buyurtma yetkazildi 🚚",    body: "Buyurtmangiz muvaffaqiyatli yetkazildi. Xaridingiz uchun rahmat!" },
-  cancelled:  { title: "Buyurtma bekor qilindi ❌",  body: "Afsuski buyurtmangiz bekor qilindi. Batafsil ma'lumot uchun biz bilan bog'laning." },
+  processing:       { title: "Buyurtma qabul qilindi ✅",  body: "Buyurtmangiz ishlov berilmoqda." },
+  ready:            { title: "Buyurtma tayyor! 🎉",        body: "Buyurtmangiz olib ketishga yoki yetkazib berishga tayyor." },
+  delivered:        { title: "Buyurtma yetkazildi 🚚",     body: "Buyurtmangiz muvaffaqiyatli yetkazildi. Xaridingiz uchun rahmat!" },
+  cancelled:        { title: "Buyurtma bekor qilindi ❌",   body: "Buyurtmangiz bekor qilindi." },
+  return_requested: { title: "Qaytarish so'rovi qabul qilindi 🔄", body: "Mahsulotni qaytarish so'rovingiz qabul qilindi. Tez orada siz bilan bog'lanishadi." },
+  returned:         { title: "Qaytarish tasdiqlandi ✅",   body: "Mahsulotingiz qaytarildi. Pul mablag'i tez orada qaytariladi." },
 };
 
 const router: IRouter = Router();
@@ -45,11 +47,14 @@ router.get("/orders", async (req, res) => {
         createdAt: ordersTable.createdAt,
         storeId: ordersTable.storeId,
         storeName: storesTable.name,
+        cancelReason: ordersTable.cancelReason,
+        returnReason: ordersTable.returnReason,
+        deliveredAt: ordersTable.deliveredAt,
       })
       .from(ordersTable)
       .leftJoin(storesTable, eq(ordersTable.storeId, storesTable.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(ordersTable.createdAt);
+      .orderBy(desc(ordersTable.createdAt));
 
     const ordersWithItems = await Promise.all(
       orders.map(async (order) => {
@@ -143,6 +148,38 @@ router.post("/orders", async (req, res) => {
       .from(orderItemsTable)
       .where(eq(orderItemsTable.orderId, newOrder.id));
 
+    // ── Xaridorga bildirishnoma: buyurtma qabul qilindi ──────────────────────
+    if (body.telegramId) {
+      const storeName = productDetails[0]?.product?.storeId
+        ? (await db.select({ name: storesTable.name }).from(storesTable)
+            .where(eq(storesTable.id, productDetails[0].product.storeId)))[0]?.name ?? ""
+        : "";
+      await createNotification({
+        telegramId: body.telegramId,
+        type: "order_new",
+        title: "Buyurtma qabul qilindi ✅",
+        body: `${newOrder.orderNumber} — ${storeName ? `"${storeName}" do'koniga ` : ""}buyurtmangiz muvaffaqiyatli yuborildi. Tez orada siz bilan bog'lanishadi.`,
+        meta: { orderId: newOrder.id, orderNumber: newOrder.orderNumber },
+      }).catch(() => {});
+    }
+
+    // ── Do'kon egasiga bildirishnoma: yangi buyurtma keldi ───────────────────
+    if (storeId) {
+      const [storeRow] = await db
+        .select({ ownerTelegramId: storesTable.ownerTelegramId, name: storesTable.name })
+        .from(storesTable)
+        .where(eq(storesTable.id, storeId));
+      if (storeRow?.ownerTelegramId) {
+        await createNotification({
+          telegramId: storeRow.ownerTelegramId,
+          type: "order_incoming",
+          title: "Yangi buyurtma keldi! 🛒",
+          body: `${newOrder.orderNumber} — ${body.customerName} tomonidan ${Number(newOrder.totalPrice).toLocaleString("uz-UZ")} so'm miqdorida buyurtma berildi.`,
+          meta: { orderId: newOrder.id, orderNumber: newOrder.orderNumber, storeId },
+        }).catch(() => {});
+      }
+    }
+
     res.status(201).json({ ...newOrder, items });
   } catch (err) {
     req.log.error({ err }, "Error creating order");
@@ -167,6 +204,9 @@ router.get("/orders/:id", async (req, res) => {
         createdAt: ordersTable.createdAt,
         storeId: ordersTable.storeId,
         storeName: storesTable.name,
+        cancelReason: ordersTable.cancelReason,
+        returnReason: ordersTable.returnReason,
+        deliveredAt: ordersTable.deliveredAt,
       })
       .from(ordersTable)
       .leftJoin(storesTable, eq(ordersTable.storeId, storesTable.id))
@@ -193,9 +233,15 @@ router.patch("/orders/:id", async (req, res) => {
     const { id } = req.params;
     const body = UpdateOrderStatusBody.parse(req.body);
 
+    // Build update payload
+    const updatePayload: Record<string, unknown> = { status: body.status };
+    if (body.status === "delivered")          updatePayload.deliveredAt  = new Date();
+    if (body.status === "cancelled"  && body.reason) updatePayload.cancelReason = body.reason;
+    if (body.status === "return_requested" && body.reason) updatePayload.returnReason = body.reason;
+
     const [updated] = await db
       .update(ordersTable)
-      .set({ status: body.status })
+      .set(updatePayload as any)
       .where(eq(ordersTable.id, id))
       .returning();
 
@@ -217,6 +263,17 @@ router.patch("/orders/:id", async (req, res) => {
         title: notif.title,
         body: `${updated.orderNumber} — ${notif.body}`,
         meta: { orderId: updated.id, orderNumber: updated.orderNumber },
+      }).catch(() => {});
+    }
+
+    // Yetkazib berilganda "sharh qoldiring" eslatmasi ─────────────────────────
+    if (body.status === "delivered" && updated.telegramId) {
+      await createNotification({
+        telegramId: updated.telegramId,
+        type: "review_request",
+        title: "Fikr qoldiring ⭐",
+        body: `${updated.orderNumber} buyurtmangizni oldingizmi? Do'kon haqida fikr qoldirsangiz, boshqa xaridorlarga yordam bergan bo'lasiz!`,
+        meta: { orderId: updated.id, orderNumber: updated.orderNumber, storeId: updated.storeId },
       }).catch(() => {});
     }
 

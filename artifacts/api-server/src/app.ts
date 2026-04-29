@@ -1,8 +1,12 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -30,5 +34,19 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use("/api", router);
+
+// Admin panel statik fayllar
+const adminDist = path.join(__dirname, "../../admin/dist/public");
+app.use("/admin", express.static(adminDist));
+app.get("/admin/*path", (_req, res) => {
+  res.sendFile(path.join(adminDist, "index.html"));
+});
+
+// User app statik fayllar
+const userDist = path.join(__dirname, "../../abz-market/dist/public");
+app.use("/", express.static(userDist));
+app.get("/*path", (_req, res) => {
+  res.sendFile(path.join(userDist, "index.html"));
+});
 
 export default app;

@@ -12,7 +12,8 @@ const router: IRouter = Router();
 
 router.get("/stores", async (req, res) => {
   try {
-    const { search, type, telegramId } = req.query as Record<string, string>;
+    const { search, type, telegramId, admin } = req.query as Record<string, string>;
+    const isAdmin = admin === "1";
 
     const conditions = [];
     if (search) conditions.push(ilike(storesTable.name, `%${search}%`));
@@ -23,7 +24,12 @@ router.get("/stores", async (req, res) => {
       ? await db.select().from(storesTable).where(conditions.length === 1 ? conditions[0] : and(...conditions))
       : await db.select().from(storesTable);
 
-    res.json({ stores });
+    // Oddiy foydalanuvchilardan maxfiy maydonlarni yashirish
+    const safeStores = isAdmin
+      ? stores
+      : stores.map(({ phone: _p, location: _l, ownerTelegramId: _t, stir: _s, ...rest }) => rest);
+
+    res.json({ stores: safeStores });
   } catch (err) {
     req.log.error({ err }, "Error fetching stores");
     res.status(500).json({ error: "Internal server error" });
@@ -33,9 +39,17 @@ router.get("/stores", async (req, res) => {
 router.get("/stores/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const isAdmin = req.query.admin === "1";
+
     const [store] = await db.select().from(storesTable).where(eq(storesTable.id, id));
     if (!store) return res.status(404).json({ error: "Store not found" });
-    res.json(store);
+
+    if (isAdmin) {
+      res.json(store);
+    } else {
+      const { phone: _p, location: _l, ownerTelegramId: _t, stir: _s, ...safeStore } = store;
+      res.json(safeStore);
+    }
   } catch (err) {
     req.log.error({ err }, "Error fetching store");
     res.status(500).json({ error: "Internal server error" });
@@ -46,6 +60,22 @@ router.post("/stores", async (req, res) => {
   try {
     const body = CreateStoreBody.parse(req.body);
     const ownerTelegramId = (req.body as Record<string, string>).ownerTelegramId ?? null;
+
+    // Bitta akkaunt - bitta do'kon tekshiruvi
+    if (ownerTelegramId) {
+      const existing = await db
+        .select()
+        .from(storesTable)
+        .where(eq(storesTable.ownerTelegramId, ownerTelegramId));
+      const activeStore = existing.find((s) => s.type !== "rejected");
+      if (activeStore) {
+        return res.status(409).json({
+          error: "Bu Telegram akkauntida allaqachon do'kon mavjud",
+          storeId: activeStore.id,
+          storeName: activeStore.name,
+        });
+      }
+    }
 
     const [newStore] = await db
       .insert(storesTable)
@@ -114,7 +144,7 @@ router.patch("/stores/:id", async (req, res) => {
           telegramId: updated.ownerTelegramId,
           type: "store_approved",
           title: "Do'koningiz tasdiqlandi! 🎉",
-          body: `"${updated.name}" do'koni muvaffaqiyatli ochildi va faol holga keltirildi.`,
+          body: `"${updated.name}" do'koni muvaffaqiyatli ochildi! Tabriklaymiz — siz endi 2 oy bepul foydalanishingiz mumkin. Mahsulotlaringizni qo'shishni boshlang! 🚀`,
           meta: { storeId: updated.id, storeName: updated.name },
         }).catch(() => {});
       } else if (action === "reject") {

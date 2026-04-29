@@ -182,6 +182,9 @@ export type GetProductsParams = {
   featured?: boolean;
   limit?: number;
   offset?: number;
+  newOnly?: boolean;
+  sortBy?: string;
+  status?: string;
 };
 
 export type GetProducts200 = {

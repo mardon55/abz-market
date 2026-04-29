@@ -171,6 +171,7 @@ export default function Delivery() {
   const { data: points = [], isLoading: pointsLoading } = useQuery({
     queryKey: ["admin-pickup-points"],
     queryFn: fetchPoints,
+    refetchInterval: 15_000,
   });
 
   const addPointMut = useMutation({
@@ -209,6 +210,7 @@ export default function Delivery() {
   const { data: zones = [], isLoading: zonesLoading } = useQuery({
     queryKey: ["admin-delivery-zones"],
     queryFn: fetchZones,
+    refetchInterval: 15_000,
   });
 
   const addZoneMut = useMutation({

@@ -27,7 +27,7 @@ router.get("/banners", async (req, res) => {
 // POST /banners — admin create
 router.post("/banners", async (req, res) => {
   try {
-    const { title, subtitle, badge, image, gradient, link, categoryId, isActive, sortOrder } = req.body;
+    const { title, subtitle, badge, image, gradient, link, categoryId, storeId, productId, isActive, sortOrder } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
 
     const [banner] = await db.insert(bannersTable).values({
@@ -38,6 +38,8 @@ router.post("/banners", async (req, res) => {
       gradient:   gradient   ?? "from-violet-600 via-purple-600 to-fuchsia-500",
       link:       link       ?? "/catalog",
       categoryId: categoryId ?? null,
+      storeId:    storeId    ?? null,
+      productId:  productId  ?? null,
       isActive:   isActive   !== undefined ? Boolean(isActive)  : true,
       sortOrder:  sortOrder  !== undefined ? Number(sortOrder)  : 0,
     }).returning();
@@ -53,7 +55,7 @@ router.post("/banners", async (req, res) => {
 router.put("/banners/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, subtitle, badge, image, gradient, link, categoryId, isActive, sortOrder } = req.body;
+    const { title, subtitle, badge, image, gradient, link, categoryId, storeId, productId, isActive, sortOrder } = req.body;
 
     const updates: Record<string, any> = {};
     if (title      !== undefined) updates.title      = title;
@@ -63,6 +65,8 @@ router.put("/banners/:id", async (req, res) => {
     if (gradient   !== undefined) updates.gradient   = gradient;
     if (link       !== undefined) updates.link       = link;
     if (categoryId !== undefined) updates.categoryId = categoryId || null;
+    if (storeId    !== undefined) updates.storeId    = storeId    || null;
+    if (productId  !== undefined) updates.productId  = productId  || null;
     if (isActive   !== undefined) updates.isActive   = Boolean(isActive);
     if (sortOrder  !== undefined) updates.sortOrder  = Number(sortOrder);
 

@@ -9,6 +9,7 @@ import { initTelegramOnce } from "@/hooks/use-telegram";
 import BotInterface from "@/pages/bot";
 import Home from "@/pages/home";
 import Catalog from "@/pages/catalog";
+
 import ProductDetail from "@/pages/product";
 import Cart from "@/pages/cart";
 import Checkout from "@/pages/checkout";
@@ -22,6 +23,8 @@ import MyStore from "@/pages/my-store";
 import Favorites from "@/pages/favorites";
 import TopMahsulotlar from "@/pages/top-mahsulotlar";
 import FlashSalePage from "@/pages/flash-sale";
+import NewArrivals from "@/pages/new-arrivals";
+import SearchPage from "@/pages/search";
 import Addresses from "@/pages/addresses";
 import Notifications from "@/pages/notifications";
 import NotFound from "@/pages/not-found";
@@ -41,6 +44,7 @@ function Router() {
       <Route path="/bot" component={BotInterface} />
       <Route path="/" component={Home} />
       <Route path="/catalog" component={Catalog} />
+      <Route path="/search" component={SearchPage} />
       <Route path="/product/:id" component={ProductDetail} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
@@ -54,6 +58,7 @@ function Router() {
       <Route path="/favorites" component={Favorites} />
       <Route path="/top-mahsulotlar" component={TopMahsulotlar} />
       <Route path="/flash-sale" component={FlashSalePage} />
+      <Route path="/new-arrivals" component={NewArrivals} />
       <Route path="/addresses" component={Addresses} />
       <Route path="/notifications" component={Notifications} />
       <Route component={NotFound} />

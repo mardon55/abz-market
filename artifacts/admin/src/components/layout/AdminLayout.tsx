@@ -13,7 +13,6 @@ const NAV = [
   { icon: ShoppingCart,    label: "Buyurtmalar",      path: "/orders" },
   { icon: Users,           label: "Foydalanuvchilar", path: "/users" },
   { icon: Store,           label: "Do'konlar",        path: "/stores" },
-  { icon: LayoutGrid,      label: "Kategoriyalar",    path: "/categories" },
   { icon: CreditCard,      label: "To'lov usullari",  path: "/payment-methods" },
   { icon: Crown,           label: "Top Mahsulotlar",  path: "/top-products" },
   { icon: ImageIcon,       label: "Bannerlar",        path: "/banners" },

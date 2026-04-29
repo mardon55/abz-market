@@ -143,16 +143,29 @@ export default function RegisterStore() {
           ownerTelegramId: tgId || undefined,
         }),
       });
+
+      // 409: allaqachon do'kon mavjud
+      if (res.status === 409) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.storeId) {
+          // Mavjud do'konni localStorage ga saqlash va yo'naltirish
+          try {
+            const entry = { storeId: errData.storeId, storeName: errData.storeName ?? step1Data!.name };
+            localStorage.setItem("abz_seller", JSON.stringify(entry));
+          } catch {}
+        }
+        setIsSubmitting(false);
+        navigate("/my-store");
+        return;
+      }
+
       if (!res.ok) throw new Error("Server xatosi");
       const storeResult = await res.json();
       if (storeResult?.id) {
         try {
           const newEntry = { storeId: storeResult.id, storeName: step1Data!.name };
           localStorage.setItem("abz_seller", JSON.stringify(newEntry));
-          const raw = localStorage.getItem("abz_stores");
-          const existing: typeof newEntry[] = raw ? JSON.parse(raw) : [];
-          const updated = [...existing.filter(s => s.storeId !== storeResult.id), newEntry];
-          localStorage.setItem("abz_stores", JSON.stringify(updated));
+          localStorage.setItem("abz_stores", JSON.stringify([newEntry]));
         } catch {}
       }
     } catch {

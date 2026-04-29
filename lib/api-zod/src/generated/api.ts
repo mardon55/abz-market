@@ -207,7 +207,8 @@ export const UpdateOrderStatusParams = zod.object({
 });
 
 export const UpdateOrderStatusBody = zod.object({
-  status: zod.enum(["new", "accepted", "shipped", "delivered", "cancelled"]),
+  status: zod.enum(["new", "accepted", "shipped", "delivered", "cancelled", "return_requested", "returned"]),
+  reason: zod.string().optional(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

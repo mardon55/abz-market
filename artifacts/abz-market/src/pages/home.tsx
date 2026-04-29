@@ -61,14 +61,14 @@ const CAT_ICONS: Record<string, string> = {
 const QUICK_ACTIONS = [
   { img: "/icons/flash.png",    label: "Flash sale",   path: "/flash-sale",           bg: "from-amber-50 to-orange-50 dark:from-amber-950/60 dark:to-orange-950/40" },
   { img: "/icons/flame.png",    label: "Top mahsulot", path: "/top-mahsulotlar", bg: "from-rose-50 to-pink-50 dark:from-rose-950/60 dark:to-pink-950/40" },
-  { img: "/icons/yangilar.png", label: "Yangilar",     path: "/catalog",              bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
+  { img: "/icons/yangilar.png", label: "Yangilar",     path: "/new-arrivals",         bg: "from-violet-50 to-purple-50 dark:from-violet-950/60 dark:to-purple-950/40" },
   { img: "/icons/dokonlar.png", label: "Do'konlar",    path: "/stores",               bg: "from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40" },
 ];
 
 const TRUST = [
   { icon: TruckIcon,   label: "Tez yetkazish", sub: "1–3 kun" },
-  { icon: ShieldCheck, label: "Kafolat",        sub: "1–2 yil" },
-  { icon: RotateCcw,   label: "Qaytarish",      sub: "14 kun" },
+  { icon: ShieldCheck, label: "Kafolat",        sub: "1–3 yil" },
+  { icon: RotateCcw,   label: "Qaytarish",      sub: "3–7 kun" },
   { icon: Percent,     label: "Chegirmalar",    sub: "Har kuni" },
 ];
 
@@ -82,17 +82,40 @@ interface BannerItem {
   gradient: string;
   link: string;
   categoryId?: string | null;
+  storeId?: string | null;
+  productId?: string | null;
 }
 
 function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavigate: (p: string) => void }) {
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
 
   useEffect(() => {
     if (banners.length <= 1) return;
     timerRef.current = setTimeout(() => setActive((p) => (p + 1) % banners.length), 3500);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [active, banners.length]);
+
+  const getBannerLink = (b: BannerItem) => {
+    if (b.productId)  return `/product/${b.productId}`;
+    if (b.storeId)    return `/store/${b.storeId}`;
+    if (b.categoryId) return `/catalog?category=${b.categoryId}`;
+    return b.link || "/catalog";
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) setActive((p) => (p + 1) % banners.length);
+      else setActive((p) => (p - 1 + banners.length) % banners.length);
+    }
+  };
 
   if (banners.length === 0) return null;
 
@@ -102,12 +125,14 @@ function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavi
         <div
           className="flex transition-transform duration-500 ease-out"
           style={{ transform: `translateX(-${active * 100}%)` }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           {banners.map((b) => (
             <div
               key={b.id}
-              className="flex-none w-full cursor-pointer"
-              onClick={() => onNavigate(b.categoryId ? `/catalog?category=${b.categoryId}` : (b.link || "/catalog"))}
+              className="flex-none w-full cursor-pointer select-none"
+              onClick={() => onNavigate(getBannerLink(b))}
             >
               <div className={cn("relative aspect-[16/8] overflow-hidden bg-gradient-to-br", b.gradient)}>
                 {b.image && (
@@ -116,6 +141,7 @@ function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavi
                     alt={b.title}
                     className="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-overlay"
                     loading="lazy"
+                    draggable={false}
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
@@ -128,10 +154,7 @@ function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavi
                   {b.subtitle && (
                     <p className="text-white/65 text-[10px] font-bold uppercase tracking-widest mb-1">{b.subtitle}</p>
                   )}
-                  <h2 className="text-white font-display font-bold text-xl leading-tight mb-3">{b.title}</h2>
-                  <span className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-4 py-1.5 rounded-full shadow-ios-sm">
-                    Ko'rish <ArrowRight className="w-3 h-3" />
-                  </span>
+                  <h2 className="text-white font-display font-bold text-xl leading-tight">{b.title}</h2>
                 </div>
               </div>
             </div>
@@ -139,7 +162,7 @@ function BannerCarousel({ banners, onNavigate }: { banners: BannerItem[]; onNavi
         </div>
         {/* Dots */}
         {banners.length > 1 && (
-          <div className="absolute bottom-4 right-4 flex gap-1.5">
+          <div className="absolute bottom-3 right-4 flex gap-1.5">
             {banners.map((_, i) => (
               <button
                 key={i}
@@ -299,6 +322,11 @@ export default function Home() {
   const { data: catData,  isLoading: catLoading  } = useCategories();
   const { data: allData,  isLoading: allLoading  } = useProducts({ limit: 200 } as any);
 
+  // Yangi kelganlar: so'nggi 24 soat ichida qo'shilgan mahsulotlar
+  const { data: newData, isLoading: newLoading } = useProducts({
+    newOnly: true, sortBy: "createdAt", limit: 6,
+  } as any);
+
   // Dynamic banners from API
   const { data: bannersData } = useQuery<{ banners: BannerItem[] }>({
     queryKey: ["/api/banners"],
@@ -319,7 +347,7 @@ export default function Home() {
   const all      = allData?.products   ?? [];
   // Top section: isFeatured OR isTopSelling
   const featured = all.filter((p) => p.isFeatured || p.isTopSelling);
-  const newArr   = all.slice(0, 5);
+  const newArr   = newData?.products ?? [];
 
   // Use API banners if available, otherwise fallback
   const apiBanners  = bannersData?.banners ?? [];
@@ -347,19 +375,12 @@ export default function Home() {
           </h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">Onlayn bozor cho'ntagingizda</p>
         </div>
-        <button
-          onClick={() => hapticFeedback("impact")}
-          className="w-9 h-9 rounded-2xl glass-card flex items-center justify-center relative press-sm shadow-ios-sm"
-        >
-          <Bell className="w-[17px] h-[17px] text-foreground/80" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-white dark:border-background" />
-        </button>
       </div>
 
       {/* ── Search ── */}
       <div className="px-4 pt-3 pb-2">
         <button
-          onClick={() => goTo("/catalog")}
+          onClick={() => goTo("/search")}
           className="w-full glass-input rounded-2xl px-4 py-3 flex items-center gap-3 press text-left shadow-ios-sm"
         >
           <Search className="w-[17px] h-[17px] text-muted-foreground shrink-0" />
@@ -408,39 +429,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Categories ── */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="font-display font-bold text-[17px] flex items-center gap-2">
-            <LayoutGrid className="w-4 h-4 text-primary" /> Kategoriyalar
-          </h2>
-          <Link href="/catalog" className="text-primary text-xs font-semibold flex items-center gap-0.5">
-            Barchasi <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-        <div className="flex gap-3 px-4 overflow-x-auto hide-scrollbar pb-1">
-          <button onClick={() => goTo("/catalog")} className="flex-none flex flex-col items-center gap-1.5 press">
-            <div className="w-[60px] h-[60px] rounded-[22px] bg-primary flex items-center justify-center shadow-ios overflow-hidden">
-              <img src="/icons/barchasi.png" alt="Barchasi" className="w-11 h-11 object-contain" />
-            </div>
-            <span className="text-[11px] font-semibold w-[60px] text-center leading-tight">Barchasi</span>
-          </button>
-          {catLoading
-            ? [1,2,3,4].map((i) => <Skeleton key={i} className="flex-none w-[60px] h-[90px] rounded-2xl" />)
-            : cats.map((cat) => (
-                <button key={cat.id} onClick={() => goTo(`/catalog?category=${cat.id}`)} className="flex-none flex flex-col items-center gap-1.5 press">
-                  <div className="w-[60px] h-[60px] rounded-[22px] glass-card flex items-center justify-center shadow-ios-sm overflow-hidden">
-                    {CAT_ICONS[cat.name]
-                      ? <img src={CAT_ICONS[cat.name]} alt={cat.name} className="w-10 h-10 object-contain drop-shadow-sm" />
-                      : <span className="text-2xl">🪑</span>
-                    }
-                  </div>
-                  <span className="text-[11px] font-semibold w-[60px] text-center leading-tight line-clamp-2">{cat.name}</span>
-                </button>
-              ))}
-        </div>
-      </div>
-
       {/* ── Flash Sale (dynamic or static) ── */}
       {flashSale ? (
         <FlashSaleBlock sale={flashSale} onNavigate={goTo} />
@@ -480,8 +468,8 @@ export default function Home() {
                       <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                       <span className="text-[10px] text-muted-foreground">{p.rating} ({p.reviewCount})</span>
                     </div>
-                    <div className="text-primary font-bold text-[13px]">{fmt(p.price)}</div>
-                    {p.oldPrice && <div className="text-muted-foreground text-[11px] line-through">{fmt(p.oldPrice)}</div>}
+                    <div className="text-primary font-bold text-[13px]">{fmt(Number(p.price))}</div>
+                    {p.oldPrice && <div className="text-muted-foreground text-[11px] line-through">{fmt(Number(p.oldPrice))}</div>}
                   </div>
                 </button>
               ))}
@@ -493,15 +481,26 @@ export default function Home() {
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="font-display font-bold text-[17px] flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-500" /> Yangi kelganlar
+            {!newLoading && newArr.length > 0 && (
+              <span className="text-[11px] font-medium text-blue-500/70 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
+                {newArr.length}+ bugun
+              </span>
+            )}
           </h2>
-          <Link href="/catalog" className="text-primary text-xs font-semibold flex items-center gap-0.5">
+          <Link href="/new-arrivals" className="text-primary text-xs font-semibold flex items-center gap-0.5">
             Ko'proq <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="space-y-2.5 px-4">
-          {allLoading
+          {newLoading
             ? [1,2,3].map((i) => <Skeleton key={i} className="h-[76px] rounded-2xl" />)
-            : newArr.map((p) => (
+            : newArr.length === 0
+              ? (
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  Bugun hali yangi mahsulot qo'shilmagan
+                </div>
+              )
+              : newArr.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => goTo(`/product/${p.id}`)}
@@ -513,8 +512,8 @@ export default function Home() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-[13px] line-clamp-1 mb-1">{p.name}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-primary font-bold text-[13px]">{fmt(p.price)}</span>
-                      {p.oldPrice && <span className="text-muted-foreground text-[11px] line-through">{fmt(p.oldPrice)}</span>}
+                      <span className="text-primary font-bold text-[13px]">{fmt(Number(p.price))}</span>
+                      {p.oldPrice && <span className="text-muted-foreground text-[11px] line-through">{fmt(Number(p.oldPrice))}</span>}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -543,36 +542,6 @@ export default function Home() {
           ? <div className="grid grid-cols-2 gap-3">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-64 rounded-3xl" />)}</div>
           : <div className="grid grid-cols-2 gap-3">{all.slice(0, 6).map((p) => <ProductCard key={p.id} product={p} />)}</div>
         }
-      </div>
-
-      {/* ── Partner banner ── */}
-      <div className="px-4 mb-8">
-        <button
-          onClick={() => goTo("/register-store")}
-          className="w-full bg-gradient-to-br from-primary via-violet-600 to-purple-700 rounded-3xl p-5 relative overflow-hidden shadow-ios-lg shadow-primary/30 press text-left"
-        >
-          <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-sm" />
-          <div className="absolute -bottom-6 -left-6 w-28 h-28 bg-white/5 rounded-full blur-sm" />
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2.5">
-              <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <Store className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                HAMKOR BO'LING
-              </span>
-            </div>
-            <h3 className="font-display font-extrabold text-white text-[18px] mb-1.5 leading-tight">
-              O'z do'koningizni oching!
-            </h3>
-            <p className="text-white/70 text-xs mb-4 leading-relaxed">
-              50 000+ xaridor bilan ulaning. Mahsulotlaringizni butun O'zbekistonga yetkazing.
-            </p>
-            <div className="inline-flex items-center gap-1.5 bg-white text-primary text-xs font-bold px-4 py-2 rounded-full shadow-ios-sm">
-              Boshlash <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-          </div>
-        </button>
       </div>
 
     </MobileLayout>

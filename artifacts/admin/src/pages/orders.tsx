@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Eye, CheckCircle, XCircle, Truck, Clock,
   X, Phone, MapPin, CreditCard, Package, RefreshCw,
-  ShoppingBag, Star,
+  ShoppingBag, Star, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type OrderStatus = "new" | "accepted" | "shipped" | "delivered" | "cancelled";
+type OrderStatus = "new" | "accepted" | "shipped" | "delivered" | "cancelled" | "return_requested" | "returned";
 
 interface OrderItem {
   id: string;
@@ -32,16 +32,21 @@ interface Order {
   totalPrice: string;
   createdAt: string;
   storeName: string | null;
+  cancelReason: string | null;
+  returnReason: string | null;
+  deliveredAt: string | null;
   items: OrderItem[];
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS: Record<OrderStatus, { label: string; badgeClass: string; icon: any; color: string; bg: string; border: string }> = {
-  new:       { label: "Yangi",         badgeClass: "badge badge-primary", icon: Clock,       color: "text-violet-700", bg: "bg-violet-50",   border: "border-violet-300" },
-  accepted:  { label: "Jarayonda",     badgeClass: "badge badge-warning", icon: ShoppingBag, color: "text-amber-700",  bg: "bg-amber-50",    border: "border-amber-300" },
-  shipped:   { label: "Yuborildi",     badgeClass: "badge badge-info",    icon: Truck,       color: "text-blue-700",   bg: "bg-blue-50",     border: "border-blue-300" },
-  delivered: { label: "Yetkazildi",    badgeClass: "badge badge-success", icon: Star,        color: "text-emerald-700",bg: "bg-emerald-50",  border: "border-emerald-300" },
-  cancelled: { label: "Bekor",         badgeClass: "badge badge-danger",  icon: XCircle,     color: "text-red-700",    bg: "bg-red-50",      border: "border-red-300" },
+  new:              { label: "Yangi",           badgeClass: "badge badge-primary", icon: Clock,       color: "text-violet-700",  bg: "bg-violet-50",   border: "border-violet-300" },
+  accepted:         { label: "Jarayonda",       badgeClass: "badge badge-warning", icon: ShoppingBag, color: "text-amber-700",   bg: "bg-amber-50",    border: "border-amber-300" },
+  shipped:          { label: "Yuborildi",       badgeClass: "badge badge-info",    icon: Truck,       color: "text-blue-700",    bg: "bg-blue-50",     border: "border-blue-300" },
+  delivered:        { label: "Yetkazildi",      badgeClass: "badge badge-success", icon: Star,        color: "text-emerald-700", bg: "bg-emerald-50",  border: "border-emerald-300" },
+  cancelled:        { label: "Bekor",           badgeClass: "badge badge-danger",  icon: XCircle,     color: "text-red-700",     bg: "bg-red-50",      border: "border-red-300" },
+  return_requested: { label: "Qaytarish so'rovi", badgeClass: "badge",            icon: RotateCcw,   color: "text-orange-700",  bg: "bg-orange-50",   border: "border-orange-300" },
+  returned:         { label: "Qaytarildi",      badgeClass: "badge",               icon: CheckCircle, color: "text-teal-700",    bg: "bg-teal-50",     border: "border-teal-300" },
 };
 
 // Main flow (linear steps), cancel is separate
@@ -160,7 +165,10 @@ function OrderModal({ order: initialOrder, onClose }: { order: Order; onClose: (
     mutation.mutate({ status });
   };
 
-  const isCancelled = order.status === "cancelled";
+  const isCancelled        = order.status === "cancelled";
+  const isReturnRequested  = order.status === "return_requested";
+  const isReturned         = order.status === "returned";
+  const isSpecialStatus    = isCancelled || isReturnRequested || isReturned;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -191,7 +199,7 @@ function OrderModal({ order: initialOrder, onClose }: { order: Order; onClose: (
             </div>
 
             {/* Steps row */}
-            {!isCancelled && (
+            {!isSpecialStatus && (
               <div className="flex gap-1.5 mb-3">
                 {FLOW_STEPS.map((step) => (
                   <StepButton
@@ -212,14 +220,61 @@ function OrderModal({ order: initialOrder, onClose }: { order: Order; onClose: (
                 <XCircle className="w-5 h-5 text-red-500 shrink-0" />
                 <div>
                   <p className="font-semibold text-sm text-red-700">Buyurtma bekor qilindi</p>
-                  <p className="text-xs text-red-500 mt-0.5">Qayta tiklash uchun "Yangi" bosqichini bosing</p>
+                  {order.cancelReason && <p className="text-xs text-red-500 mt-0.5">Sabab: {order.cancelReason}</p>}
+                  <p className="text-xs text-red-400 mt-0.5">Qayta tiklash uchun "Yangi" bosqichini bosing</p>
+                </div>
+              </div>
+            )}
+
+            {/* Return requested state */}
+            {isReturnRequested && (
+              <div className="space-y-2 mb-3">
+                <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                  <RotateCcw className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-sm text-orange-700">Mijoz qaytarish so'rovi yubordi</p>
+                    {order.returnReason && <p className="text-xs text-orange-600 mt-0.5">Sabab: {order.returnReason}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    disabled={mutation.isPending}
+                    onClick={() => handleStatusChange("returned")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-teal-200 bg-teal-50 text-teal-700 text-sm font-semibold transition-all hover:bg-teal-100",
+                      mutation.isPending && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <CheckCircle className="w-4 h-4" /> Qaytarishni tasdiqlash
+                  </button>
+                  <button
+                    disabled={mutation.isPending}
+                    onClick={() => handleStatusChange("delivered")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-border bg-muted text-muted-foreground text-sm font-semibold transition-all hover:bg-muted/80",
+                      mutation.isPending && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <XCircle className="w-4 h-4" /> Rad etish
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Returned state */}
+            {isReturned && (
+              <div className="flex items-center gap-3 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 mb-3">
+                <CheckCircle className="w-5 h-5 text-teal-500 shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm text-teal-700">Qaytarish tasdiqlandi</p>
+                  {order.returnReason && <p className="text-xs text-teal-500 mt-0.5">Sabab: {order.returnReason}</p>}
                 </div>
               </div>
             )}
 
             {/* Cancel / restore button */}
             <div className="flex gap-2">
-              {!isCancelled ? (
+              {!isSpecialStatus ? (
                 <button
                   disabled={mutation.isPending}
                   onClick={() => handleStatusChange("cancelled")}
@@ -382,12 +437,14 @@ export default function Orders() {
   }, {} as Record<string, number>);
 
   const TABS = [
-    { key: "all",       label: `Barchasi (${orders.length})` },
-    { key: "new",       label: `Yangi (${counts.new || 0})` },
-    { key: "accepted",  label: `Jarayonda (${counts.accepted || 0})` },
-    { key: "shipped",   label: `Yuborildi (${counts.shipped || 0})` },
-    { key: "delivered", label: `Yetkazildi (${counts.delivered || 0})` },
-    { key: "cancelled", label: `Bekor (${counts.cancelled || 0})` },
+    { key: "all",              label: `Barchasi (${orders.length})` },
+    { key: "new",              label: `Yangi (${counts.new || 0})` },
+    { key: "accepted",         label: `Jarayonda (${counts.accepted || 0})` },
+    { key: "shipped",          label: `Yuborildi (${counts.shipped || 0})` },
+    { key: "delivered",        label: `Yetkazildi (${counts.delivered || 0})` },
+    { key: "cancelled",        label: `Bekor (${counts.cancelled || 0})` },
+    { key: "return_requested", label: `Qaytarish so'rovi (${counts.return_requested || 0})` },
+    { key: "returned",         label: `Qaytarildi (${counts.returned || 0})` },
   ];
 
   // Keep selected order in sync after status update

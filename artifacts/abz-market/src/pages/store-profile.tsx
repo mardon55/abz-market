@@ -57,17 +57,6 @@ export default function StoreProfile() {
           </div>
         </div>
 
-        {/* Contacts */}
-        <div className="space-y-3 mb-8">
-          <div className="flex items-center gap-3 text-sm">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span>{store.location}</span>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <Phone className="w-4 h-4 text-muted-foreground" />
-            <span>{store.phone}</span>
-          </div>
-        </div>
 
         {/* Store Products */}
         <div>

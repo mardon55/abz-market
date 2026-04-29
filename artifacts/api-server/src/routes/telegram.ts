@@ -7,9 +7,7 @@ import { eq } from "drizzle-orm";
 const router: IRouter = Router();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const APP_URL = process.env.REPLIT_DOMAINS
-  ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-  : "https://localhost";
+const APP_URL = process.env.APP_URL || "https://localhost";
 
 const MINI_APP_URL = APP_URL;
 
@@ -173,16 +171,6 @@ router.post("/telegram/webhook", async (req, res) => {
             reply_markup: getMainMenuKeyboard(),
           }
         );
-
-        // Also send inline keyboard with Mini App buttons
-        await bot.sendMessage(
-          chatId,
-          `📱 *ABZ MARKET* mini ilovasini ochish uchun quyidagi tugmalardan foydalaning:`,
-          {
-            parse_mode: "Markdown",
-            reply_markup: getInlineMenuKeyboard(),
-          }
-        );
       } else if (text === "/catalog") {
         await bot.sendMessage(chatId, "🛍 Katalogni ochish uchun tugmani bosing:", {
           reply_markup: {
@@ -250,10 +238,7 @@ router.post("/telegram/webhook", async (req, res) => {
             `✅ 50+ do'kon\n` +
             `✅ Tez yetkazib berish\n` +
             `✅ 1 yil kafolat`,
-            {
-              parse_mode: "Markdown",
-              reply_markup: getInlineMenuKeyboard()
-            }
+            { parse_mode: "Markdown" }
           );
         }
       }

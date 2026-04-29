@@ -83,6 +83,9 @@ export const ordersTable = pgTable("orders", {
   storeId: uuid("store_id").references(() => storesTable.id),
   telegramId: text("telegram_id"),
   createdAt: timestamp("created_at").defaultNow(),
+  cancelReason: text("cancel_reason"),
+  returnReason: text("return_reason"),
+  deliveredAt: timestamp("delivered_at"),
 });
 
 export const orderItemsTable = pgTable("order_items", {
@@ -118,6 +121,8 @@ export const bannersTable = pgTable("banners", {
   gradient: text("gradient").default("from-violet-600 via-purple-600 to-fuchsia-500"),
   link: text("link").default("/catalog"),
   categoryId: uuid("category_id").references(() => categoriesTable.id, { onDelete: "set null" }),
+  storeId: uuid("store_id").references(() => storesTable.id, { onDelete: "set null" }),
+  productId: uuid("product_id").references(() => productsTable.id, { onDelete: "set null" }),
   isActive: boolean("is_active").default(true),
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),

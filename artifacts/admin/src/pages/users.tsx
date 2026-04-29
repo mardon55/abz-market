@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, MapPin, Phone, X, Home, Briefcase, Building2,
-  Star, RefreshCw, Calendar, ChevronDown, ShoppingBag,
-  TrendingUp, Users, User, Loader2, Hash, UserCheck, UserX,
+  Star, RefreshCw, Calendar, ShoppingBag,
+  TrendingUp, Users, User, Loader2, Hash, UserCheck, Bot,
 } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -16,8 +16,16 @@ interface ApiUser {
   avatar: string | null;
   createdAt: string;
   isRegistered?: boolean;
+  hasProfile?: boolean;
   orderCount?: number;
   totalSpent?: number;
+}
+
+interface ApiStats {
+  total: number;
+  botUsers: number;
+  withPhone: number;
+  withOrders: number;
 }
 
 interface Address {
@@ -52,11 +60,14 @@ function colorFor(id: string) {
   return COLORS[Math.abs(h) % COLORS.length];
 }
 
-async function fetchUsers(): Promise<ApiUser[]> {
+async function fetchUsers(): Promise<{ users: ApiUser[]; stats: ApiStats }> {
   const r = await fetch("/api/users");
   if (!r.ok) throw new Error("Yuklanmadi");
   const d = await r.json();
-  return d.users ?? [];
+  return {
+    users: d.users ?? [],
+    stats: d.stats ?? { total: 0, botUsers: 0, withPhone: 0, withOrders: 0 },
+  };
 }
 
 async function fetchAddresses(telegramId: string): Promise<Address[]> {
@@ -253,11 +264,15 @@ export default function UsersPage() {
   const [selected, setSelected] = useState<ApiUser | null>(null);
   const [sortBy,   setSortBy]   = useState<"date" | "orders" | "spent">("date");
 
-  const { data: users = [], isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin-users"],
     queryFn: fetchUsers,
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,   // 15 soniyada bir real-time yangilanish
+    staleTime: 10_000,
   });
+
+  const users = data?.users ?? [];
+  const stats = data?.stats;
 
   const filtered = users
     .filter((u) => {
@@ -276,10 +291,6 @@ export default function UsersPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-  const totalOrders = users.reduce((s, u) => s + (u.orderCount ?? 0), 0);
-  const totalSpent  = users.reduce((s, u) => s + (u.totalSpent ?? 0), 0);
-  const withPhone   = users.filter(u => u.phone).length;
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -291,24 +302,58 @@ export default function UsersPage() {
             </div>
             <h1 className="font-display font-bold text-2xl">Foydalanuvchilar</h1>
           </div>
-          <p className="text-muted-foreground text-sm ml-12">{users.length} ta ro'yxatdan o'tgan</p>
+          <div className="flex items-center gap-2 ml-12">
+            <p className="text-muted-foreground text-sm">
+              {stats ? `${stats.total} ta jami foydalanuvchi` : "Yuklanmoqda..."}
+            </p>
+            {isFetching && !isLoading && (
+              <span className="flex items-center gap-1 text-xs text-primary/70">
+                <RefreshCw className="w-3 h-3 animate-spin" /> yangilanmoqda
+              </span>
+            )}
+          </div>
         </div>
         <button
           onClick={() => refetch()}
-          className="w-9 h-9 flex items-center justify-center bg-muted border border-border/60 rounded-xl hover:bg-muted/80 self-start"
+          disabled={isFetching}
+          className="w-9 h-9 flex items-center justify-center bg-muted border border-border/60 rounded-xl hover:bg-muted/80 self-start disabled:opacity-50"
           title="Yangilash"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className={cn("w-3.5 h-3.5", isFetching && "animate-spin text-primary")} />
         </button>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         {[
-          { label: "Jami foydalanuvchilar", value: users.length,            icon: Users,       color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-900/20" },
-          { label: "Telefon kiritganlar",   value: withPhone,               icon: Phone,       color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-          { label: "Jami buyurtmalar",      value: totalOrders,             icon: ShoppingBag, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
-          { label: "Umumiy xarid",          value: formatPrice(totalSpent), icon: TrendingUp,  color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
+          {
+            label: "Bot foydalanuvchilar",
+            value: stats?.botUsers ?? 0,
+            icon: Bot,
+            color: "text-violet-600",
+            bg: "bg-violet-50 dark:bg-violet-900/20",
+          },
+          {
+            label: "Telefon kiritganlar",
+            value: stats?.withPhone ?? 0,
+            icon: Phone,
+            color: "text-emerald-600",
+            bg: "bg-emerald-50 dark:bg-emerald-900/20",
+          },
+          {
+            label: "Buyurtma berganlar",
+            value: stats?.withOrders ?? 0,
+            icon: ShoppingBag,
+            color: "text-blue-600",
+            bg: "bg-blue-50 dark:bg-blue-900/20",
+          },
+          {
+            label: "Jami (mehmonlar bilan)",
+            value: stats?.total ?? 0,
+            icon: Users,
+            color: "text-amber-600",
+            bg: "bg-amber-50 dark:bg-amber-900/20",
+          },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className={cn("rounded-2xl p-4 flex items-center gap-3", bg)}>
             <Icon className={cn("w-5 h-5 shrink-0", color)} />
@@ -370,7 +415,7 @@ export default function UsersPage() {
               </p>
               {!search && (
                 <p className="text-xs text-muted-foreground max-w-xs">
-                  Foydalanuvchilar mini-ilovani ochganda yoki bot bilan muloqot qilganda avtomatik qo'shiladi
+                  Foydalanuvchilar Telegram bot bilan muloqot qilganda yoki mini-ilovani ochganda avtomatik qo'shiladi
                 </p>
               )}
             </div>
@@ -388,9 +433,9 @@ export default function UsersPage() {
                   )}
                 >
                   {/* Avatar */}
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0", color)}>
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0 overflow-hidden", color)}>
                     {u.avatar
-                      ? <img src={u.avatar} alt={u.firstName} className="w-full h-full object-cover rounded-xl" />
+                      ? <img src={u.avatar} alt={u.firstName} className="w-full h-full object-cover" />
                       : initials
                     }
                   </div>
@@ -399,6 +444,16 @@ export default function UsersPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-semibold text-sm truncate">{u.firstName} {u.lastName ?? ""}</span>
+                      {u.hasProfile && u.isRegistered && (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded-full shrink-0">
+                          Ro'yxatdan o'tgan
+                        </span>
+                      )}
+                      {u.isRegistered && !u.hasProfile && (
+                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded-full shrink-0">
+                          Bot foydalanuvchi
+                        </span>
+                      )}
                       {u.isRegistered === false && (
                         <span className="text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full shrink-0">
                           Mehmon
@@ -406,13 +461,15 @@ export default function UsersPage() {
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                      {u.phone && (
-                        <span className="flex items-center gap-0.5">
+                      {u.phone ? (
+                        <span className="flex items-center gap-0.5 text-foreground/70">
                           <Phone className="w-3 h-3" /> {u.phone}
                         </span>
+                      ) : (
+                        <span className="text-muted-foreground/50 italic">telefon yo'q</span>
                       )}
                       {u.telegramId && (
-                        <span className="font-mono opacity-60">TG: {u.telegramId}</span>
+                        <span className="font-mono opacity-50">ID: {u.telegramId}</span>
                       )}
                     </div>
                   </div>
@@ -433,8 +490,6 @@ export default function UsersPage() {
                   <div className="text-xs text-muted-foreground shrink-0 hidden sm:block ml-1">
                     {new Date(u.createdAt).toLocaleDateString("uz-UZ")}
                   </div>
-
-                  <MapPin className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                 </button>
               );
             })
@@ -445,7 +500,7 @@ export default function UsersPage() {
       {/* Total count */}
       {!isLoading && filtered.length > 0 && (
         <p className="text-center text-xs text-muted-foreground mt-3">
-          {filtered.length} ta foydalanuvchi ko'rsatilmoqda
+          {filtered.length} ta ko'rsatilmoqda • 15 soniyada yangilanadi
         </p>
       )}
 

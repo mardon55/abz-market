@@ -40,14 +40,14 @@ const STATUS_MAP = {
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function fetchStores(): Promise<ApiStore[]> {
-  const r = await fetch("/api/stores");
+  const r = await fetch("/api/stores?admin=1");
   if (!r.ok) throw new Error("Do'konlar yuklanmadi");
   const data = await r.json();
   return data.stores ?? [];
 }
 
 async function patchStore(id: string, action: "approve" | "reject"): Promise<ApiStore> {
-  const r = await fetch(`/api/stores/${id}`, {
+  const r = await fetch(`/api/stores/${id}?admin=1`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action }),
@@ -264,7 +264,7 @@ export default function Stores() {
   const { data: stores = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-stores"],
     queryFn: fetchStores,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
 
   const patchMut = useMutation({

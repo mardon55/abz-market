@@ -5,12 +5,17 @@ import {
   Plus, Package, Clock, CheckCircle, XCircle,
   Trash2, X, ChevronDown, ImageIcon,
   AlertCircle, RefreshCw, Star, Send,
-  Pencil, RotateCcw, Tag, Palette, Ruler,
+  Pencil, RotateCcw, Tag,
   ToggleLeft, ToggleRight, Settings, Camera, Save,
   MapPin, Phone, Store,
 } from "lucide-react";
 import { hapticFeedback } from "@/hooks/use-telegram";
 import { cn } from "@/lib/utils";
+
+import { CATEGORY_SPECS, getSpecForCategory, detectCategory, type CategorySpec, type Category } from "@/lib/category-specs";
+import { calcPctDiff, serializeSpecs, MAX_IMAGES } from "@/lib/specs-utils";
+import { ChipInput } from "@/components/ChipInput";
+import { SpecSection } from "@/components/SpecSection";
 
 // ── Types ─────────────────────────────────────────────────────
 interface SellerInfo { storeId: string; storeName: string; }
@@ -29,7 +34,7 @@ interface Product {
   deliveryDays: number | null; quantity: number | null;
   warranty: string | null;
 }
-interface Category { id: string; name: string; icon: string | null; }
+
 
 function loadSeller(): SellerInfo | null {
   try { const r = localStorage.getItem("abz_seller"); return r ? JSON.parse(r) : null; }
@@ -43,7 +48,11 @@ const STATUS_MAP = {
   rejected: { label: "Rad etilgan",  cls: "bg-red-100 text-red-600",        icon: XCircle },
 };
 
-// ── Image compression ─────────────────────────────────────────
+// ── Image compression + 3:4 ratio validation ──────────────────
+// 3:4 = 0.75 | ±6% tolerance: [0.705, 0.795]
+const TARGET_RATIO = 3 / 4;
+const RATIO_TOLERANCE = 0.06;
+
 async function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -52,8 +61,17 @@ async function compressImage(file: File): Promise<string> {
       const img = new Image();
       img.onerror = reject;
       img.onload = () => {
+        const ratio = img.naturalWidth / img.naturalHeight;
+        if (Math.abs(ratio - TARGET_RATIO) > RATIO_TOLERANCE) {
+          const pct = Math.round(ratio * 100);
+          reject(new Error(
+            `"${file.name}" 3:4 formatda emas (${img.naturalWidth}×${img.naturalHeight}). ` +
+            `Iltimos 3:4 rasm yuklang (masalan: 900×1200).`
+          ));
+          return;
+        }
         const MAX = 1200;
-        let { width, height } = img;
+        let { naturalWidth: width, naturalHeight: height } = img;
         if (width > MAX || height > MAX) {
           if (width >= height) { height = Math.round((height * MAX) / width); width = MAX; }
           else { width = Math.round((width * MAX) / height); height = MAX; }
@@ -69,448 +87,6 @@ async function compressImage(file: File): Promise<string> {
   });
 }
 
-// ── Category-specific spec fields ─────────────────────────────
-interface SpecField {
-  key: string; label: string;
-  type: "text" | "number" | "select" | "toggle";
-  unit?: string; options?: string[]; placeholder?: string;
-}
-interface CategorySpec { names: string[]; emoji: string; fields: SpecField[]; }
-
-const KORPUS_OPTIONS = ["LDSP Laminat","MDF","Eman massiv","Sosna massiv","Metall","Plastik","Kombinatsiya (LDSP+MDF)"];
-const FASAD_OPTIONS  = ["MDF bo'yalgan (emal)","Akril","Eman furnir","Matt laminat","PVC plyonka","Shisha (tempered)","Plastik ABS","Alyuminiy profil","Kombinatsiya"];
-
-const CATEGORY_SPECS: CategorySpec[] = [
-  {
-    names: ["Shkaflar"],
-    emoji: "🚪",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
-      { key: "color",      label: "Asosiy rangi",         type: "text",   placeholder: "masalan: Oq, Wenge, Yong'oq" },
-      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 150" },
-      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
-      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 60" },
-      { key: "doors",      label: "Eshiklar soni",        type: "select", options: ["1","2","3","4","Kupe (slayder)","Akkordeon"] },
-      { key: "drawers",    label: "Tortmachalar soni",    type: "select", options: ["0","1","2","3","4","5+"] },
-      { key: "mirror",     label: "Ko'zgu mavjud",        type: "toggle" },
-      { key: "assembly",   label: "Yig'ilgan holda yetkazish", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Komodlar"],
-    emoji: "🗄️",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang" },
-      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
-      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 100" },
-      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 45" },
-      { key: "drawers",    label: "Tortmachalar soni",    type: "select", options: ["2","3","4","5","6","7+"] },
-      { key: "topGlass",   label: "Shisha ustlik",        type: "toggle" },
-      { key: "mirror",     label: "Ko'zgu bilan",         type: "toggle" },
-    ],
-  },
-  {
-    names: ["Oshxonalar"],
-    emoji: "🍳",
-    fields: [
-      { key: "corpusMat",    label: "Korpus materiali (karkasi)",          type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",    label: "Fasad materiali (eshik va dekorlar)", type: "select", options: ["MDF bo'yalgan (emal)","Akril","Plastik PVC","Eman furnir","Matt laminat","Ekran (reklam. plyonka)","Shisha (tempered)","Alyuminiy profil"] },
-      { key: "color",        label: "Asosiy rangi",        type: "text",   placeholder: "masalan: Oq, Kulrang, Yashil" },
-      { key: "shape",        label: "Rejasi (shakli)",     type: "select", options: ["To'g'ri (lineynyy)","L-shakl","U-shakl","P-shakl","Orolcha bilan"] },
-      { key: "totalLen",     label: "Umumiy uzunlik",      type: "number", unit: "sm",  placeholder: "masalan: 300" },
-      { key: "upperH",       label: "Yuqori shkaf balandligi", type: "number", unit: "sm", placeholder: "masalan: 72" },
-      { key: "countertop",   label: "Ish yuzasi (stoleshnitsa)", type: "select", options: ["LDSP","Granit","Sun'iy tosh","Eman massiv","Kompozit","Kvarts"] },
-      { key: "sink",         label: "Lavabo bilan",        type: "toggle" },
-      { key: "appliances",   label: "Texnika kiritilgan",  type: "toggle" },
-      { key: "hood",         label: "Degaz (vытяжка) bilan", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Yotoqona", "Yotoqxona"],
-    emoji: "🛏️",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
-      { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Karavot + shkaf","Karavot + shkaf + komod"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Marra" },
-      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"] },
-      { key: "headboard",  label: "Bosh to'ri (izgolov'e)", type: "select", options: ["Yumshoq to'r","Qattiq to'r","Kamarli","Yog'ochdan","Maxsus dizayn"] },
-      { key: "storage",    label: "Qutilar bilan (yotoq ostida)", type: "toggle" },
-      { key: "mattress",   label: "Matras bilan birga",   type: "toggle" },
-      { key: "nightstand", label: "Tungi stol bilan",     type: "toggle" },
-    ],
-  },
-  {
-    names: ["Karavotlar"],
-    emoji: "🛌",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (asosiy karkasi)",  type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan qism)", type: "select", options: ["MDF bo'yalgan","Eko-teri qoplama","Mato qoplama","Yog'och massiv (eman/sosna)","Metall profil","Laminat"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Jigarrang, Qora" },
-      { key: "size",       label: "O'lcham (uzun × keng)", type: "select", options: ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"] },
-      { key: "height",     label: "Poldan to'shak yuzasigacha", type: "number", unit: "sm", placeholder: "masalan: 45" },
-      { key: "headboard",  label: "Bosh to'ri turi",      type: "select", options: ["Yumshoq qoplama","Qattiq yog'och","Metaldan","Kamarli","Boshi yo'q"] },
-      { key: "storage",    label: "Qutilar bilan (pastda)", type: "toggle" },
-      { key: "mattress",   label: "Matras bilan birga",   type: "toggle" },
-      { key: "slats",      label: "Reykalar (latylar) bilan", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Divonlar"],
-    emoji: "🛋️",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkas)",          type: "select", options: ["Yog'och (qayın/eman)","Metall","Plastik tayanch","Kombinatsiya (yog'och+metall)"] },
-      { key: "facadeMat",  label: "Fasad materiali (qoplama — obivka)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Mikrofiber","Bukle","Shenil","Chenille"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Bej, To'q jigarrang" },
-      { key: "shape",      label: "Shakli",               type: "select", options: ["To'g'ri (klassik)","L-shakl (uglovoy)","U-shakl","Modul","Ottoman bilan"] },
-      { key: "length",     label: "Uzunligi (eni)",        type: "number", unit: "sm",  placeholder: "masalan: 220" },
-      { key: "depth",      label: "Chuqurligi (o'tirilganda)", type: "number", unit: "sm", placeholder: "masalan: 90" },
-      { key: "seats",      label: "O'tirish joylari",     type: "select", options: ["2","3","4","5","6+","Modul"] },
-      { key: "foldable",   label: "Yotiladigan (razkladnoy)", type: "toggle" },
-      { key: "storage",    label: "Qutilar bilan (ichida)", type: "toggle" },
-      { key: "pillows",    label: "Dekorativ yostiqlar bilan", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Kreslo"],
-    emoji: "🪑",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkas)",          type: "select", options: ["Yog'och (qayın/eman)","Metall","Plastik tayanch","Kombinatsiya (yog'och+metall)"] },
-      { key: "facadeMat",  label: "Fasad materiali (qoplama — obivka)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato","Velur","Bukle","Shenil","Mikrofiber"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Jigarrang, Bej, Yashil" },
-      { key: "type",       label: "Kreslo turi",          type: "select", options: ["Klassik","Bergere (katta)","Ofis","Aylanadigan","Teri massaj","Salona"] },
-      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
-      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 85" },
-      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 95" },
-      { key: "foldable",   label: "Yotiladigan",          type: "toggle" },
-      { key: "armrests",   label: "Qo'ltiqchalar bilan",  type: "toggle" },
-      { key: "swivel",     label: "Aylanadigan (360°)",   type: "toggle" },
-    ],
-  },
-  {
-    names: ["Stollar"],
-    emoji: "🍽️",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (oyoqlar / tayanch)", type: "select", options: ["Metall profil","Eman massiv","MDF","Plastik","Chrome metall","Kombinatsiya (metall+yog'och)"] },
-      { key: "facadeMat",  label: "Fasad materiali (stol yuzasi)",       type: "select", options: ["Eman massiv","MDF + laminat","Shisha (tempered)","Mramor (tabiiy)","Granit","Keramika","LDSP","Kvarts (kompozit)"] },
-      { key: "tableType",  label: "Stol turi",            type: "select", options: ["Ovqat stoli","Kofe stoli","Yozuv stoli","Jurnal stoli","Konsolka","Burchak stoli","Transformerli"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Oq, Yog'och" },
-      { key: "length",     label: "Uzunligi",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
-      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 90" },
-      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 76" },
-      { key: "shape",      label: "Shakli",               type: "select", options: ["To'rtburchak","Kvadrat","Doira","Oval","Noodatiy"] },
-      { key: "extendable", label: "Kengaytiriladigan (razdvizhnoy)", type: "toggle" },
-      { key: "chairs",     label: "Stullar bilan birga",  type: "toggle" },
-      { key: "chairCount", label: "Stullar soni",         type: "select", options: ["2","4","6","8","10+"] },
-    ],
-  },
-  {
-    names: ["Stullar"],
-    emoji: "💺",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkas / oyoqlar)", type: "select", options: ["Eman massiv","Qayın massiv","Metall xrom","Metall qora","Plastik","Kombinatsiya (yog'och+metall)"] },
-      { key: "facadeMat",  label: "Fasad materiali (o'tirgich qoplamasi)", type: "select", options: ["Haqiqiy teri","Eko-teri","Mato (trikotaj)","Velur","Plastik (monolit)","Yog'och (tabiiy)","Shenil"] },
-      { key: "chairType",  label: "Stul turi",            type: "select", options: ["Oshxona stuli","Ofis kreslo","Bar stuli","Mulyazh (dekorativ)","Bolalar stuli"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qora, Bej, Kulrang" },
-      { key: "height",     label: "O'tirgich balandligi", type: "number", unit: "sm",  placeholder: "masalan: 46" },
-      { key: "armrests",   label: "Qo'ltiqchalar bilan",  type: "toggle" },
-      { key: "adjustable", label: "Balandlik sozlanadi",  type: "toggle" },
-      { key: "wheels",     label: "G'ildiraklar bilan",   type: "toggle" },
-      { key: "foldable",   label: "Bukiladigan (skladnoy)", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Javonlar"],
-    emoji: "📚",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: [...FASAD_OPTIONS, "Metall to'r","Ochiq (fasadsiz)"] },
-      { key: "shelfType",  label: "Javon turi",           type: "select", options: ["Kitob javoni","Dekorativ javon","Garderob tizimi","Oshxona javoni","Ofis javoni","Devorga mahkamlanadigan"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Qora" },
-      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 80" },
-      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
-      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 30" },
-      { key: "shelves",    label: "Javonlar soni",        type: "select", options: ["2","3","4","5","6","7","8","9+"] },
-      { key: "doors",      label: "Eshiklar bilan",       type: "toggle" },
-      { key: "wallMount",  label: "Devorga o'rnatiladi",  type: "toggle" },
-      { key: "glass",      label: "Shisha eshiklar",      type: "toggle" },
-    ],
-  },
-  {
-    names: ["Matraslar"],
-    emoji: "💤",
-    fields: [
-      { key: "corpusMat",  label: "Korpus (ichki to'ldirma) materiali", type: "select", options: ["Memory foam (viskoeластik)","Lateks (tabiiy)","Lateks (sintetik)","Kokonut qatlam","Yay: Bonnel (bog'liq)","Yay: Pocket (mustaqil)","Poliuretan köpük","Gibrid (yay+foam)"] },
-      { key: "facadeMat",  label: "Fasad (qoplama chehlа) materiali",   type: "select", options: ["Jacquard (to'qilgan)","Trikotaj mato","Aloe vera qoplama","Bambuk qatlam","Eurotop (qo'shimcha yumshoq qatlam)","3D mesh (havo o'tkazuvchi)"] },
-      { key: "matType",    label: "Matras turi",          type: "select", options: ["Yay (prujina) bilan","Prujinasiz (bespruzhinniy)","Ortopedik","Memory foam","Lateks","Kokonut qatlam","Gibrid"] },
-      { key: "size",       label: "O'lcham",              type: "select", options: ["60×120 (bola)","70×140","80×190","90×200","120×200","140×200","160×200","180×200","200×200"] },
-      { key: "thickness",  label: "Qalinligi",            type: "number", unit: "sm",  placeholder: "masalan: 20" },
-      { key: "firmness",   label: "Qattiqlik darajasi",   type: "select", options: ["Juda yumshoq","Yumshoq","O'rta-yumshoq","O'rta","O'rta-qattiq","Qattiq","Juda qattiq"] },
-      { key: "warranty",   label: "Kafolat",              type: "select", options: ["1 yil","2 yil","3 yil","5 yil","7 yil","10 yil","15 yil","20 yil"] },
-      { key: "removeCover", label: "Qoplama yechish mumkin", type: "toggle" },
-      { key: "twoSides",   label: "Ikki tomonlama (turnover)", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Bola xonasi"],
-    emoji: "🧸",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: ["LDSP Laminat (xavfsiz)","MDF (xavfsiz)","Eman massiv","Sosna massiv","Plastik (sertifikatlangan)","Kombinatsiya"] },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: ["MDF bo'yalgan (xavfsiz emal)","Akril","Eman furnir","Matt laminat","PVC plyonka","Mato qoplama (dekorativ)"] },
-      { key: "setType",    label: "Garnitur turi",        type: "select", options: ["To'liq garnitur","Faqat karavot","Burchak (uglovoy) karavot","Stol + stul","Shkaf","Ikki qavatli karavot"] },
-      { key: "ageGroup",   label: "Yosh guruh",           type: "select", options: ["0–3 yosh","3–7 yosh","7–12 yosh","12–17 yosh","Universal"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Pushti, Ko'k" },
-      { key: "bedSize",    label: "Karavot o'lchami",     type: "select", options: ["60×120","70×140","80×160","80×200","90×200"] },
-      { key: "safeCoat",   label: "Xavfsiz ekologik lak / bo'yoq", type: "toggle" },
-      { key: "storage",    label: "Yashirma tortmachalar bilan", type: "toggle" },
-      { key: "study",      label: "Yozuv stoli bilan",    type: "toggle" },
-      { key: "bunk",       label: "Ikki qavatli (supraloft)", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Ofis mebeli"],
-    emoji: "🖥️",
-    fields: [
-      { key: "corpusMat",  label: "Korpus materiali (karkasi)",        type: "select", options: KORPUS_OPTIONS },
-      { key: "facadeMat",  label: "Fasad materiali (ko'rinadigan yuz)", type: "select", options: FASAD_OPTIONS },
-      { key: "officeType", label: "Mebelning turi",       type: "select", options: ["Ish stoli","Ofis kreslo","Kitob javoni","Yig'ma to'plam (garnitur)","Qabul stoli","Kutish xonasi divani"] },
-      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Qora, Yong'oq" },
-      { key: "deskW",      label: "Stol eni",             type: "number", unit: "sm",  placeholder: "masalan: 160" },
-      { key: "deskD",      label: "Stol chuqurligi",      type: "number", unit: "sm",  placeholder: "masalan: 70" },
-      { key: "deskH",      label: "Stol balandligi",      type: "number", unit: "sm",  placeholder: "masalan: 76" },
-      { key: "pedestal",   label: "Pedestal (tirqish quti) bilan", type: "toggle" },
-      { key: "cable",      label: "Sim boshqaruv tizimi", type: "toggle" },
-    ],
-  },
-  {
-    names: ["Gilamlar"],
-    emoji: "🏡",
-    fields: [
-      { key: "rugType",    label: "Gilam turi",           type: "select", options: ["Mashinada to'qilgan","Qo'lda to'qilgan","Tafted","Kilim (yassi)","Shenil","Shaggy (uzun tuk)","Bambuk"] },
-      { key: "material",   label: "Tolasi",               type: "select", options: ["Poliester","Akril","Polipropilen","Jun (wool)","Ipak","Bambuk","Viskoza","Gibrid"] },
-      { key: "size",       label: "O'lcham",              type: "select", options: ["60×110","80×150","100×150","100×200","120×170","120×180","150×200","160×230","200×300","Maxsus o'lcham"] },
-      { key: "pile",       label: "Tuk balandligi",       type: "select", options: ["Tuksiz (kilim)","Past (6–8 mm)","O'rta (10–15 mm)","Baland (20–30 mm)","Juda baland (shaggy 40mm+)"] },
-      { key: "color",      label: "Asosiy rang / naqsh",  type: "text",   placeholder: "masalan: Bej geometrik, Kulrang abstraktsiya" },
-      { key: "antislip",   label: "Pastki qismi slipmay", type: "toggle" },
-      { key: "washable",   label: "Mashinada yuviladi",   type: "toggle" },
-    ],
-  },
-  {
-    names: ["Chiroqlar"],
-    emoji: "💡",
-    fields: [
-      { key: "lightType",  label: "Chiroq turi",          type: "select", options: ["Lyustra (shiftga)","Bra (devorga)","Torshyer (polda)","Stol chiroqi","Spot (nuqtaviy)","LED panel","Track light","Arxitektura LED"] },
-      { key: "style",      label: "Dizayn uslubi",        type: "select", options: ["Zamonaviy (modern)","Skandinavcha","Klassik","Loft / Industrial","Minimalizm","Art Deco","Provans"] },
-      { key: "material",   label: "Korpus materiali",     type: "select", options: ["Metall xrom","Metall qora","Bronza / Oltin","Mis","Shisha + metall","Akrilik","Qog'oz / Mato"] },
-      { key: "colorTemp",  label: "Rang harorati",        type: "select", options: ["2700K – Issiq oq (xona)","3000K – Iliq oq","4000K – Tabiiy oq","5000–6500K – Sovuq oq (ofis)"] },
-      { key: "power",      label: "Quvvati",              type: "number", unit: "W",   placeholder: "masalan: 40" },
-      { key: "diameter",   label: "Diametr / Eni",        type: "number", unit: "sm",  placeholder: "masalan: 60" },
-      { key: "bulbBase",   label: "Patron (razem)",       type: "select", options: ["E27","E14","E40","GU10","GU5.3","G9","LED o'rnatilgan","G13 (lyuminessent)"] },
-      { key: "dimmable",   label: "Yorqinlik boshqariladi (dimmer)", type: "toggle" },
-      { key: "remote",     label: "Pult bilan",           type: "toggle" },
-      { key: "bulbIncl",   label: "Lampa kiritilgan",     type: "toggle" },
-    ],
-  },
-];
-
-// ── Find spec for a given category name ────────────────────────
-function getSpecForCategory(catName: string | null): CategorySpec | null {
-  if (!catName) return null;
-  return CATEGORY_SPECS.find((s) =>
-    s.names.some((n) => n.toLowerCase() === catName.toLowerCase())
-  ) ?? null;
-}
-
-// ── Auto-detect category from product name ─────────────────────
-const KW_MAP: [string[], string[]][] = [
-  [["shkaf","wardrobe","garderob","kupe"],                      ["Shkaflar"]],
-  [["komod","komod","dresser","chest","kommodik"],               ["Komodlar"]],
-  [["oshxona","mutfak","kitchen","garnitur oshxo"],             ["Oshxonalar"]],
-  [["divan","sofa","диван","uglovoy divan"],                    ["Divonlar"]],
-  [["kreslo","armchair","fotel","кресло"],                      ["Kreslo"]],
-  [["stol","masa","table","jurnal stoli","coffee table"],       ["Stollar"]],
-  [["stul","chair","taburet","bar stul"],                       ["Stullar"]],
-  [["javon","shelf","polka","kitob","bookcase","stellaj"],       ["Javonlar"]],
-  [["karavot","kravat","bed","кровать"],                        ["Karavotlar"]],
-  [["matras","mattress"],                                       ["Matraslar"]],
-  [["bola","kids","детская","bolalar"],                         ["Bola xonasi"]],
-  [["ofis","office"],                                          ["Ofis mebeli"]],
-  [["gilam","carpet","kovyor","kilim"],                         ["Gilamlar"]],
-  [["chiroq","lampa","lamp","lyustra","bra","torshyer","led"],  ["Chiroqlar"]],
-  [["yotoq","yotoqxona","bedroom","garnitur yotoq"],            ["Yotoqona","Yotoqxona"]],
-];
-
-function detectCategory(name: string, cats: Category[]): string {
-  if (!name.trim() || !cats.length) return "";
-  const lower = name.toLowerCase();
-  for (const c of cats) {
-    if (lower.includes(c.name.toLowerCase())) return c.id;
-  }
-  for (const [words, targetNames] of KW_MAP) {
-    if (words.some((w) => lower.includes(w))) {
-      for (const tName of targetNames) {
-        const found = cats.find((c) => c.name.toLowerCase() === tName.toLowerCase());
-        if (found) return found.id;
-      }
-    }
-  }
-  return "";
-}
-
-// ── Price % ────────────────────────────────────────────────────
-function calcPctDiff(newP: string, oldP: string): number | null {
-  const n = parseFloat(newP.replace(/[\s,]/g, ""));
-  const o = parseFloat(oldP.replace(/[\s,]/g, ""));
-  if (!n || !o || o === 0) return null;
-  return Math.round(((n - o) / o) * 100);
-}
-
-// ── Serialize specs to dimensions string ───────────────────────
-function serializeSpecs(specs: Record<string, string>, specDef: CategorySpec): string {
-  const parts: string[] = [];
-  for (const field of specDef.fields) {
-    const val = specs[field.key];
-    if (!val || val === "Yo'q") continue;
-    const valStr = field.unit ? `${val} ${field.unit}` : val;
-    parts.push(`${field.label}: ${valStr}`);
-  }
-  return parts.join(" | ");
-}
-
-// ── Preset chip options ────────────────────────────────────────
-const PRESET_COLORS = ["Oq","Qora","Kulrang","Ko'k","Yashil","Qizil","Sariq","Jigarrang","Bej","Binafsha","To'q sariq","Pushti"];
-const PRESET_SIZES  = ["S","M","L","XL","XXL","XXXL"];
-const PRESET_SIZES_BED = ["90×200","160×220","180×220","170×210","120×200","140×200","200×200"];
-// Note: Also used for Matraslar (mattress) category
-const MAX_IMAGES = 6;
-
-// ── ChipInput ─────────────────────────────────────────────────
-function ChipInput({ label, icon: Icon, items, onAdd, onRemove, placeholder, presets }: {
-  label: string; icon: React.ElementType; items: string[];
-  onAdd: (v: string) => void; onRemove: (i: number) => void;
-  placeholder: string; presets?: string[];
-}) {
-  const [val, setVal] = useState("");
-  const add = () => { const t = val.trim(); if (t && !items.includes(t)) onAdd(t); setVal(""); };
-  return (
-    <div>
-      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-2">
-        <Icon className="w-3.5 h-3.5" /> {label}
-      </label>
-      {presets && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {presets.map((p) => {
-            const active = items.includes(p);
-            return (
-              <button key={p} type="button"
-                onClick={() => active ? onRemove(items.indexOf(p)) : onAdd(p)}
-                className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all",
-                  active ? "bg-primary text-white border-primary" : "bg-muted/60 text-muted-foreground border-border/60"
-                )}>{p}</button>
-            );
-          })}
-        </div>
-      )}
-      {items.filter((i) => !presets?.includes(i)).length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {items.filter((i) => !presets?.includes(i)).map((chip, _idx) => (
-            <span key={chip} className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-semibold">
-              {chip}
-              <button type="button" onClick={() => onRemove(items.indexOf(chip))} className="hover:text-red-500">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input value={val} onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder={placeholder}
-          className="flex-1 h-9 px-3 bg-muted/50 border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <button type="button" onClick={add} disabled={!val.trim()}
-          className="h-9 px-3 bg-primary/10 text-primary rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-primary/20 transition-colors"
-        >+ Qo'sh</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Dynamic spec section ───────────────────────────────────────
-function SpecSection({ specDef, specs, onChange }: {
-  specDef: CategorySpec;
-  specs: Record<string, string>;
-  onChange: (key: string, val: string) => void;
-}) {
-  return (
-    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-base">{specDef.emoji}</span>
-        <span className="text-xs font-bold text-primary">
-          {specDef.names[0]} xususiyatlari
-        </span>
-        <span className="text-[10px] bg-primary text-white px-1.5 py-0.5 rounded-md ml-auto">
-          Majburiy
-        </span>
-      </div>
-      {specDef.fields.map((f) => (
-        <div key={f.key}>
-          <label className="block text-xs font-semibold text-muted-foreground mb-1">
-            {f.label}{f.unit ? ` (${f.unit})` : ""}
-          </label>
-          {f.type === "select" ? (
-            <div className="relative">
-              <select
-                value={specs[f.key] ?? ""}
-                onChange={(e) => onChange(f.key, e.target.value)}
-                className="w-full h-10 px-3 pr-8 bg-background border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="">— Tanlang —</option>
-                {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-            </div>
-          ) : f.type === "toggle" ? (
-            <button
-              type="button"
-              onClick={() => onChange(f.key, specs[f.key] === "Bor" ? "Yo'q" : "Bor")}
-              className={cn(
-                "flex items-center gap-2 h-10 px-3 rounded-xl border text-sm font-semibold transition-all w-full",
-                specs[f.key] === "Bor"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                  : "bg-muted/40 text-muted-foreground border-border/60"
-              )}
-            >
-              {specs[f.key] === "Bor"
-                ? <ToggleRight className="w-4 h-4 text-emerald-600" />
-                : <ToggleLeft className="w-4 h-4" />}
-              {specs[f.key] === "Bor" ? "✓ Bor" : "Yo'q"}
-            </button>
-          ) : (
-            <div className="relative">
-              <input
-                type={f.type === "number" ? "number" : "text"}
-                value={specs[f.key] ?? ""}
-                onChange={(e) => onChange(f.key, e.target.value)}
-                placeholder={f.placeholder ?? ""}
-                className="w-full h-10 px-3 bg-background border border-border/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-              {f.unit && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">
-                  {f.unit}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── Product Modal ─────────────────────────────────────────────
 function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
@@ -542,9 +118,23 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const [oldPrice, setOldPrice] = useState(editProduct?.oldPrice ?? "");
   const [desc, setDesc]         = useState(editProduct?.description ?? "");
   const [images, setImages]     = useState<string[]>(editProduct?.images ?? []);
+  // Find parent category id for a given sub-category id
+  const findParentId = (subId: string): string => {
+    for (const p of categories) {
+      if (p.subcategories?.some((s) => s.id === subId)) return p.id;
+      if (p.id === subId) return p.id;
+    }
+    return "";
+  };
+
+  const [parentCatId, setParentCatId] = useState(() =>
+    editProduct?.categoryId ? findParentId(editProduct.categoryId) : ""
+  );
   const [catId, setCatId]       = useState(editProduct?.categoryId ?? "");
-  const [colors, setColors]     = useState<string[]>(editProduct?.colors ?? []);
-  const [sizes, setSizes]       = useState<string[]>(editProduct?.sizes ?? []);
+  const [colors, setColors]     = useState<string[]>([]);
+  const [sizes, setSizes]       = useState<string[]>([]);
+  const [productColor, setProductColor] = useState<string>(editProduct?.colors?.[0] ?? "");
+  const [productSize, setProductSize]   = useState<string>(editProduct?.sizes?.[0] ?? "");
   const [specs, setSpecs]       = useState<Record<string, string>>(parseEditSpecs);
   const [deliveryDays, setDeliveryDays] = useState<string>(
     editProduct?.deliveryDays ? String(editProduct.deliveryDays) : "3"
@@ -561,24 +151,43 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const [autoDetected, setAutoDetected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const selectedParent = categories.find((p) => p.id === parentCatId);
+  const subCats = selectedParent?.subcategories ?? [];
+
   // Auto-detect category
   useEffect(() => {
     if (!name.trim() || catId) return;
     const detected = detectCategory(name, categories);
-    if (detected) { setCatId(detected); setAutoDetected(true); }
-    else setAutoDetected(false);
+    if (detected) {
+      setCatId(detected);
+      setParentCatId(findParentId(detected));
+      setAutoDetected(true);
+    } else setAutoDetected(false);
   }, [name]);
 
+  const handleParentCatChange = (v: string) => {
+    setParentCatId(v);
+    setCatId(""); // reset subcategory
+    setSpecs({});
+    setAutoDetected(false);
+  };
   const handleCatChange = (v: string) => { setCatId(v); setAutoDetected(false); setSpecs({}); };
   const updateSpec = (key: string, val: string) => setSpecs((p) => ({ ...p, [key]: val }));
   const pct = calcPctDiff(price, oldPrice);
 
-  // Get current category name and spec def
-  const currentCat = categories.find((c) => c.id === catId);
+  // Get current subcategory and spec def
+  const currentCat = subCats.find((s) => s.id === catId)
+    ?? (subCats.length === 0 ? selectedParent : null);
   const specDef = getSpecForCategory(currentCat?.name ?? null);
 
-  const isKaravat = /karavot|karavat|kravat|bed|yotoq|matras/i.test(currentCat?.name ?? "");
-  const sizePresets = isKaravat ? PRESET_SIZES_BED : PRESET_SIZES;
+  // Rang + Razmer faqat kiyim, poyabzal, aksessuarlar uchun
+  const COLOR_SIZE_CATS = [
+    "Erkaklar kiyimlari","Ayollar kiyimlari","Bolalar kiyimlari","Sport kiyimlari","Ichki kiyim",
+    "Erkaklar poyabzali","Ayollar poyabzali","Bolalar poyabzali","Sport poyabzali",
+    "Sumkalar","Hamyonlar","Zargarlik va bijuteriya","Soatlar","Ko'zoynak","Kamarlar","Shlyapalar va qalpoqlar","Telefon aksessuarlari",
+    "O'yinchoqlar",
+  ];
+  const showColorSize = COLOR_SIZE_CATS.some(n => n === currentCat?.name);
 
   const handleImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -602,10 +211,15 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
   const handleSubmit = async () => {
     if (!name.trim()) { setError("Mahsulot nomini kiriting"); return; }
     if (!price.trim()) { setError("Narxni kiriting"); return; }
+    if (!parentCatId) { setError("Asosiy kategoriyani tanlang"); return; }
+    if (subCats.length > 0 && !catId) { setError("Sub kategoriyani tanlang"); return; }
     const priceNum = parseFloat(price.replace(/[\s,]/g, ""));
     if (isNaN(priceNum) || priceNum <= 0) { setError("Narx noto'g'ri"); return; }
     const oldPriceNum = oldPrice ? parseFloat(oldPrice.replace(/[\s,]/g, "")) : null;
     const dimensionsStr = specDef ? serializeSpecs(specs, specDef) : null;
+
+    // Use subcategory id if available, else parent category id
+    const finalCatId = (subCats.length > 0 ? catId : parentCatId) || null;
 
     setSaving(true); setError("");
     try {
@@ -613,9 +227,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
         name: name.trim(), price: String(priceNum),
         oldPrice: oldPriceNum ? String(oldPriceNum) : null,
         description: desc.trim() || null, images,
-        categoryId: catId || null, storeId,
-        colors: colors.length ? colors : null,
-        sizes: sizes.length ? sizes : null,
+        categoryId: finalCatId, storeId,
+        colors: productColor.trim() ? [productColor.trim()] : null,
+        sizes: productSize.trim() ? [productSize.trim()] : null,
         dimensions: dimensionsStr || null,
         deliveryDays: parseInt(deliveryDays) || 3,
         quantity: parseInt(quantity) || 1,
@@ -706,29 +320,55 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">Kategoriya</label>
+          {/* Category — 2 bosqichli tanlash */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-muted-foreground">Kategoriya *</label>
               {autoDetected && catId && (
                 <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md font-semibold">
                   ✓ Avtomatik aniqlandi
                 </span>
               )}
             </div>
+
+            {/* Step 1: Parent Category */}
             <div className="relative">
-              <select value={catId} onChange={(e) => handleCatChange(e.target.value)}
+              <select
+                value={parentCatId}
+                onChange={(e) => handleParentCatChange(e.target.value)}
                 className="w-full h-11 px-4 pr-9 bg-muted/50 border border-border/60 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value="">— Kategoriya tanlang —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.icon ? c.icon + " " : ""}{c.name}</option>
+                <option value="">— Asosiy kategoriya tanlang —</option>
+                {categories.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.icon ? p.icon + " " : ""}{p.name}
+                  </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
+
+            {/* Step 2: Subcategory (only if parent has subcategories) */}
+            {parentCatId && subCats.length > 0 && (
+              <div className="relative">
+                <select
+                  value={catId}
+                  onChange={(e) => handleCatChange(e.target.value)}
+                  className="w-full h-11 px-4 pr-9 bg-primary/5 border border-primary/30 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">— Sub kategoriya tanlang —</option>
+                  {subCats.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.icon ? sub.icon + " " : ""}{sub.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/60 pointer-events-none" />
+              </div>
+            )}
+
             {specDef && (
-              <p className="text-[11px] text-primary mt-1.5 font-semibold">
+              <p className="text-[11px] text-primary font-semibold">
                 {specDef.emoji} {specDef.names[0]} uchun qo'shimcha ma'lumotlar quyida so'raladi ↓
               </p>
             )}
@@ -780,9 +420,16 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
               </span>
               {images.length > 0 && <span className="text-[10px] text-muted-foreground">Birinchi — asosiy rasm</span>}
             </div>
+            {/* 3:4 format haqida xabar */}
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 mb-2">
+              <span className="text-blue-600 text-base leading-none">📐</span>
+              <span className="text-[10px] text-blue-700 font-medium">
+                Faqat <b>3:4</b> formatdagi rasmlar qabul qilinadi (masalan: 900×1200, 600×800 px)
+              </span>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {images.map((src, idx) => (
-                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden bg-muted border-2 border-primary/30">
+                <div key={idx} className="relative rounded-2xl overflow-hidden bg-muted border-2 border-primary/30" style={{aspectRatio: "3/4"}}>
                   <img src={src} alt="" className="w-full h-full object-cover" />
                   {idx === 0 && (
                     <div className="absolute bottom-0 inset-x-0 bg-primary/80 text-white text-[9px] font-bold text-center py-0.5">Asosiy</div>
@@ -795,9 +442,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
               ))}
               {images.length < MAX_IMAGES && (
                 <label htmlFor="mi-inp" className={cn(
-                  "aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all",
+                  "rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all",
                   compressing ? "border-primary/40 bg-primary/5" : "border-border active:bg-muted/60"
-                )}>
+                )} style={{aspectRatio: "3/4"}}>
                   {compressing
                     ? <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                     : (
@@ -806,8 +453,9 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
                           <ImageIcon className="w-5 h-5 text-primary" />
                         </div>
                         <span className="text-[10px] font-semibold text-primary text-center px-1">
-                          {images.length === 0 ? "📷 Rasm qo'shish" : "+ Qo'shish"}
+                          {images.length === 0 ? "Rasm qo'shish" : "+ Qo'shish"}
                         </span>
+                        <span className="text-[9px] text-muted-foreground text-center px-1 mt-0.5">3:4 format</span>
                       </>
                     )}
                   <input id="mi-inp" ref={fileInputRef} type="file" accept="image/*" multiple
@@ -816,26 +464,33 @@ function ProductModal({ storeId, categories, onClose, onSaved, editProduct }: {
               )}
             </div>
             {images.length === 0 && (
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">1–6 ta rasm (avtomatik siqiladi, maks 15MB)</p>
+              <p className="text-[11px] text-muted-foreground mt-2 text-center">1–6 ta rasm | maks 15MB | faqat 3:4</p>
             )}
           </div>
 
-          {/* Colors */}
-          <ChipInput label="Mavjud ranglar" icon={Palette} items={colors}
-            onAdd={(v) => setColors((p) => [...p, v])}
-            onRemove={(i) => setColors((p) => p.filter((_, j) => j !== i))}
-            placeholder="Rang kiriting..." presets={PRESET_COLORS}
-          />
-
-          {/* Sizes */}
-          <ChipInput
-            label={isKaravat ? "Karavot o'lchamlari" : "Mavjud o'lchamlar (razmerlar)"}
-            icon={Ruler} items={sizes}
-            onAdd={(v) => setSizes((p) => [...p, v])}
-            onRemove={(i) => setSizes((p) => p.filter((_, j) => j !== i))}
-            placeholder={isKaravat ? "O'lcham tanlang yoki kiriting (masalan: 90×200)" : "O'lcham kiriting (masalan: 160×80×75 sm)"}
-            presets={sizePresets}
-          />
+          {/* Rang + Razmer — faqat tegishli kategoriyalarda */}
+          {showColorSize && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">🎨 Rang</label>
+                <input
+                  value={productColor}
+                  onChange={(e) => setProductColor(e.target.value)}
+                  placeholder="Masalan: Qora"
+                  className="w-full h-9 px-2.5 bg-muted/50 border border-border/60 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">📐 Razmer</label>
+                <input
+                  value={productSize}
+                  onChange={(e) => setProductSize(e.target.value)}
+                  placeholder="Masalan: XL"
+                  className="w-full h-9 px-2.5 bg-muted/50 border border-border/60 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Delivery days */}
           <div>
@@ -1198,6 +853,8 @@ export default function MyStore() {
       setAllStores(entries);
       setActiveSeller(entries[0]);
       setShowTgIdInput(false);
+      // loadData ni to'g'ridan-to'g'ri chaqiramiz (useEffect qayta ishga tushmasligi uchun)
+      loadData(entries[0]);
     } catch {
       navigate("/register-store");
     } finally {
@@ -1271,12 +928,6 @@ export default function MyStore() {
                 <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
               ) : "Do'konni topish"}
             </button>
-            <button
-              onClick={() => navigate("/register-store")}
-              className="w-full h-11 rounded-2xl border border-border text-sm font-medium text-muted-foreground"
-            >
-              Yangi do'kon ochish
-            </button>
           </div>
         </div>
       </MobileLayout>
@@ -1296,59 +947,6 @@ export default function MyStore() {
   return (
     <MobileLayout hideNav={false} title="Do'konim">
       <div className="px-4 pt-4 pb-24">
-
-        {/* Store switcher — visible only if user has multiple stores */}
-        {allStores.length > 1 && (
-          <div className="mb-3">
-            <button
-              onClick={() => { hapticFeedback("selection"); setShowSwitcher(v => !v); }}
-              className="w-full flex items-center gap-2 bg-primary/10 rounded-2xl px-4 py-2.5 active:scale-[0.98] transition-transform"
-            >
-              <Store className="w-4 h-4 text-primary shrink-0" />
-              <span className="flex-1 text-left font-semibold text-sm text-primary truncate">
-                {seller?.storeName}
-              </span>
-              <ChevronDown className={cn("w-4 h-4 text-primary transition-transform", showSwitcher && "rotate-180")} />
-            </button>
-            {showSwitcher && (
-              <div className="mt-1.5 bg-card border border-border/60 rounded-2xl overflow-hidden shadow-lg">
-                {allStores.map((s, idx) => (
-                  <button
-                    key={s.storeId}
-                    onClick={() => switchStore(s)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                      idx > 0 && "border-t border-border/40",
-                      s.storeId === seller?.storeId ? "bg-primary/5" : "active:bg-muted/50"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm",
-                      s.storeId === seller?.storeId ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                    )}>
-                      {s.storeName[0]}
-                    </div>
-                    <span className="flex-1 font-medium text-sm truncate">{s.storeName}</span>
-                    {s.storeId === seller?.storeId && (
-                      <CheckCircle className="w-4 h-4 text-primary shrink-0" />
-                    )}
-                  </button>
-                ))}
-                <div className="border-t border-border/40">
-                  <button
-                    onClick={() => { hapticFeedback("impact"); setShowSwitcher(false); navigate("/register-store"); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center">
-                      <Plus className="w-4 h-4 text-violet-600" />
-                    </div>
-                    <span className="font-semibold text-sm text-violet-700">Yangi do'kon qo'shish</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Store banner */}
         <div className="bg-gradient-to-br from-primary via-violet-600 to-purple-700 rounded-3xl p-4 mb-5 relative overflow-hidden shadow-ios-lg shadow-primary/30">
