@@ -217,7 +217,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Qurilish va ta'mirlash — 2 ta yangi (davomi: 7,8)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0005-0000-0000-000000000007','Elektr asboblari','🔌','https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400',7,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000007','Elektr asboblari','🔌','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/dmsb7xb0_elektr%20asboblar.webp',7,'c1000000-0000-0000-0000-000000000005'),
 ('c2000000-0005-0000-0000-000000000008','Gul qog''ozlar va elimlar','🎨','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/zhkrdmui_gul%20qogozlar.jpg',8,'c1000000-0000-0000-0000-000000000005')
 ON CONFLICT (id) DO NOTHING;
 
@@ -348,6 +348,7 @@ UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/hrmes5ff_bo%27yoqlar.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000003';
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/fvu3caa9_santexnika.jpeg' WHERE id = 'c2000000-0005-0000-0000-000000000004';
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/21pvim81_photo_5197362456748036655_x%20%281%29.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000006';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/dmsb7xb0_elektr%20asboblar.webp' WHERE id = 'c2000000-0005-0000-0000-000000000007';
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/zhkrdmui_gul%20qogozlar.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000008';
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pqmd0dsh_photo_5197362456748036656_y.jpg' WHERE id = 'c2000000-0006-0000-0000-000000000002';
 UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/og0z9bo4_photo_5197362456748036665_y.jpg' WHERE id = 'c2000000-0006-0000-0000-000000000005';
