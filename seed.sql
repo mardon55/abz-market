@@ -163,11 +163,11 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Bolalar tovarlari subkategoriyalari (5 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0014-0000-0000-000000000001','O''yinchoqlar','🧸','https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400',1,'c1000000-0000-0000-0000-000000000014'),
-('c2000000-0014-0000-0000-000000000002','Bolalar aravachalari','🍼','https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400',2,'c1000000-0000-0000-0000-000000000014'),
-('c2000000-0014-0000-0000-000000000003','Bolalar mebeli','🛏️','https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',3,'c1000000-0000-0000-0000-000000000014'),
+('c2000000-0014-0000-0000-000000000001','O''yinchoqlar','🧸','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/j76rr4ei_o%27yinchoqlar.JPG',1,'c1000000-0000-0000-0000-000000000014'),
+('c2000000-0014-0000-0000-000000000002','Bolalar aravachalari','🍼','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ixxnlild_aravachalari.jpg',2,'c1000000-0000-0000-0000-000000000014'),
+('c2000000-0014-0000-0000-000000000003','Bolalar mebeli','🛏️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/fahu2ft4_bolalar%20mebeli.jpg',3,'c1000000-0000-0000-0000-000000000014'),
 ('c2000000-0014-0000-0000-000000000004','Ta''lim va rivojlanish','📚','https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',4,'c1000000-0000-0000-0000-000000000014'),
-('c2000000-0014-0000-0000-000000000005','Bolalar oziq-ovqati','🍼','https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',5,'c1000000-0000-0000-0000-000000000014')
+('c2000000-0014-0000-0000-000000000005','Bolalar oziq-ovqati','🍼','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/mcjh82mk_oziq%20ovqat.jpg',5,'c1000000-0000-0000-0000-000000000014')
 ON CONFLICT (id) DO NOTHING;
 
 -- Aksessuarlar subkategoriyalari (8 ta)
