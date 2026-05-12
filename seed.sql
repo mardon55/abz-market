@@ -155,9 +155,9 @@ ON CONFLICT (id) DO NOTHING;
 -- Avtotovarlar subkategoriyalari (5 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0013-0000-0000-000000000001','Avto aksessuarlar','🔧','https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400',1,'c1000000-0000-0000-0000-000000000013'),
-('c2000000-0013-0000-0000-000000000002','Moy va suyuqliklar','🛢️','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',2,'c1000000-0000-0000-0000-000000000013'),
-('c2000000-0013-0000-0000-000000000003','Shinalar va disklar','🔩','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',3,'c1000000-0000-0000-0000-000000000013'),
-('c2000000-0013-0000-0000-000000000004','Avto elektronika','📟','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',4,'c1000000-0000-0000-0000-000000000013'),
+('c2000000-0013-0000-0000-000000000002','Moy va suyuqliklar','🛢️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/jw8ddg4h_photo_5197362456748036705_y.jpg',2,'c1000000-0000-0000-0000-000000000013'),
+('c2000000-0013-0000-0000-000000000003','Shinalar va disklar','🔩','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/do4cqv1w_photo_5197362456748036706_y.jpg',3,'c1000000-0000-0000-0000-000000000013'),
+('c2000000-0013-0000-0000-000000000004','Avto elektronika','📟','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/gw59ofeq_photo_5197362456748036710_y.jpg',4,'c1000000-0000-0000-0000-000000000013'),
 ('c2000000-0013-0000-0000-000000000005','Tozalash va kimyo','🧹','https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',5,'c1000000-0000-0000-0000-000000000013')
 ON CONFLICT (id) DO NOTHING;
 
