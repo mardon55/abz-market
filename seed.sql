@@ -79,12 +79,12 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Qurilish va ta'mirlash subkategoriyalari (6 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0005-0000-0000-000000000001','Pol qoplamalar','🪵','https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400',1,'c1000000-0000-0000-0000-000000000005'),
-('c2000000-0005-0000-0000-000000000002','Devor qoplamalar','🧱','https://images.unsplash.com/photo-1560472355-a3b4490e42eb?w=400',2,'c1000000-0000-0000-0000-000000000005'),
-('c2000000-0005-0000-0000-000000000003','Bo''yoqlar va laklar','🎨','https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400',3,'c1000000-0000-0000-0000-000000000005'),
-('c2000000-0005-0000-0000-000000000004','Santexnika','🚿','https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400',4,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000001','Pol qoplamalar','🪵','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ephozvdp_photo_5197362456748036646_y.jpg',1,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000002','Devor qoplamalar','🧱','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/hzi1ja24_photo_5197362456748036653_x.jpg',2,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000003','Bo''yoqlar va laklar','🎨','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/hrmes5ff_bo%27yoqlar.jpg',3,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000004','Santexnika','🚿','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/fvu3caa9_santexnika.jpeg',4,'c1000000-0000-0000-0000-000000000005'),
 ('c2000000-0005-0000-0000-000000000005','Elektr materiallari','⚡','https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400',5,'c1000000-0000-0000-0000-000000000005'),
-('c2000000-0005-0000-0000-000000000006','Eshik va derazalar','🚪','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',6,'c1000000-0000-0000-0000-000000000005')
+('c2000000-0005-0000-0000-000000000006','Eshik va derazalar','🚪','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/21pvim81_photo_5197362456748036655_x%20%281%29.jpg',6,'c1000000-0000-0000-0000-000000000005')
 ON CONFLICT (id) DO NOTHING;
 
 -- Yorug'lik subkategoriyalari (5 ta)
