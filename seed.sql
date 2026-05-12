@@ -65,7 +65,7 @@ INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0003-0000-0000-000000000004','Konditsionerlar','🌬️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/vvtsik30_konditsioner.webp',4,'c1000000-0000-0000-0000-000000000003'),
 ('c2000000-0003-0000-0000-000000000005','Oshxona texnikasi','🍳','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/j2f1cuyj_misirupka.webp',5,'c1000000-0000-0000-0000-000000000003'),
 ('c2000000-0003-0000-0000-000000000006','Changyutgich','🧹','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/krxlxob4_chang%20yutgich.jpg',6,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000007','Isitgich va ventilyator','🌡️','https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400',7,'c1000000-0000-0000-0000-000000000003')
+('c2000000-0003-0000-0000-000000000007','Isitgich va ventilyator','🌡️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/dcbub0wt_ventilyator.webp',7,'c1000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
 
 -- Yotoq to'shaklari subkategoriyalari (5 ta)
@@ -195,9 +195,9 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Maishiy texnika — 3 ta yangi (davomi: 8,9,10)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0003-0000-0000-000000000008','Tikuv mashinalari','🧵','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',8,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000009','Dazmollar va bug''lagichlar','👔','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',9,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000010','Go''zallik uchun texnika','💅','https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',10,'c1000000-0000-0000-0000-000000000003')
+('c2000000-0003-0000-0000-000000000008','Tikuv mashinalari','🧵','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/5h75z0yx_tikuv%20mashinasi.webp',8,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000009','Dazmollar va bug''lagichlar','👔','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/21wm6wuy_dazmol.jpg',9,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000010','Go''zallik uchun texnika','💅','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/s5f98cg2_fen.jpg',10,'c1000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
 
 -- Uy-ro'zg'or — 2 ta yangi (davomi: 7,8)
