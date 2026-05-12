@@ -218,7 +218,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Qurilish va ta'mirlash — 2 ta yangi (davomi: 7,8)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0005-0000-0000-000000000007','Elektr asboblari','🔌','https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400',7,'c1000000-0000-0000-0000-000000000005'),
-('c2000000-0005-0000-0000-000000000008','Gul qog''ozlar va elimlar','🎨','https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400',8,'c1000000-0000-0000-0000-000000000005')
+('c2000000-0005-0000-0000-000000000008','Gul qog''ozlar va elimlar','🎨','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/zhkrdmui_gul%20qogozlar.jpg',8,'c1000000-0000-0000-0000-000000000005')
 ON CONFLICT (id) DO NOTHING;
 
 -- Go'zallik va parvarish — 2 ta yangi (davomi: 6,7)
