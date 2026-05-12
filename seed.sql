@@ -90,10 +90,10 @@ ON CONFLICT (id) DO NOTHING;
 -- Yorug'lik subkategoriyalari (5 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0006-0000-0000-000000000001','Chiroqlar','✨','https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400',1,'c1000000-0000-0000-0000-000000000006'),
-('c2000000-0006-0000-0000-000000000002','Devor chiroqlari','💡','https://images.unsplash.com/photo-1513506003901-1e6a35eb4d43?w=400',2,'c1000000-0000-0000-0000-000000000006'),
+('c2000000-0006-0000-0000-000000000002','Devor chiroqlari','💡','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pqmd0dsh_photo_5197362456748036656_y.jpg',2,'c1000000-0000-0000-0000-000000000006'),
 ('c2000000-0006-0000-0000-000000000003','Stol va pol chiroqlari','🕯️','https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=400',3,'c1000000-0000-0000-0000-000000000006'),
 ('c2000000-0006-0000-0000-000000000004','LED va smart chiroqlar','🔆','https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400',4,'c1000000-0000-0000-0000-000000000006'),
-('c2000000-0006-0000-0000-000000000005','Ko''cha va bog'' chiroqlar','🌟','https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400',5,'c1000000-0000-0000-0000-000000000006')
+('c2000000-0006-0000-0000-000000000005','Ko''cha va bog'' chiroqlar','🌟','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/og0z9bo4_photo_5197362456748036665_y.jpg',5,'c1000000-0000-0000-0000-000000000006')
 ON CONFLICT (id) DO NOTHING;
 
 -- Dekor va bezak subkategoriyalari (6 ta)
