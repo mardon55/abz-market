@@ -137,9 +137,9 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Poyabzal subkategoriyalari (4 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0011-0000-0000-000000000001','Erkaklar poyabzali','👞','https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',1,'c1000000-0000-0000-0000-000000000011'),
+('c2000000-0011-0000-0000-000000000001','Erkaklar poyabzali','👞','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/w7gdg5th_photo_5197362456748036693_x.jpg',1,'c1000000-0000-0000-0000-000000000011'),
 ('c2000000-0011-0000-0000-000000000002','Ayollar poyabzali','👠','https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400',2,'c1000000-0000-0000-0000-000000000011'),
-('c2000000-0011-0000-0000-000000000003','Bolalar poyabzali','👟','https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=400',3,'c1000000-0000-0000-0000-000000000011'),
+('c2000000-0011-0000-0000-000000000003','Bolalar poyabzali','👟','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/vih2ob8a_photo_5197362456748036695_y.jpg',3,'c1000000-0000-0000-0000-000000000011'),
 ('c2000000-0011-0000-0000-000000000004','Sport poyabzali','🏃','https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400',4,'c1000000-0000-0000-0000-000000000011')
 ON CONFLICT (id) DO NOTHING;
 
