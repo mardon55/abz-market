@@ -38,12 +38,12 @@ INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0001-0000-0000-000000000004','Bola xonasi','🧒','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/46fzfgci_what-should-be-a-childrens-room-for-a-girl-layout-colors-and-design.webp',4,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000005','Ofis mebeli','💼','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ciguc262_74412799b8fcbf84ab07d2ebc41bfe7e.webp',5,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000006','Shkaflar','🚪','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/8jtzh2pv_without-handle.webp',6,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000007','Stollar','🪑','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/2yu6w8vj_img-20240212-231943-539.jpg',7,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000008','Vannaxona mebellar','🚿','https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400',8,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000007','Stollar','🪑','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/tkjayp8v_1737548602.webp',7,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000008','Vannaxona mebellar','🚿','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/xq09rjmd_img-20240212-231943-539.jpg',8,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000009','Karavotlar','🛏️','https://images.unsplash.com/photo-1505693314120-0d443867891c?w=400',9,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000010','Stullar','🪑','https://images.unsplash.com/photo-1567016432779-094069958ea5?w=400',10,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000011','Komodlar','🗄️','https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',11,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000012','Javonlar','📚','https://images.unsplash.com/photo-1592078615290-033ee584e267?w=400',12,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000010','Stullar','🪑','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pfbsxkfx_4454654.jpg',10,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000011','Komodlar','🗄️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pqt6xxhg_t_product_540_high.webp',11,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000012','Javonlar','📚','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/uaat8o2r_image.webp',12,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000013','Kreslo','🪑','https://images.unsplash.com/photo-1567016432779-094069958ea5?w=400',13,'c1000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
