@@ -70,11 +70,11 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Yotoq to'shaklari subkategoriyalari (5 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0004-0000-0000-000000000001','Matraslar','🛏️','https://images.unsplash.com/photo-1505693314120-0d443867891c?w=400',1,'c1000000-0000-0000-0000-000000000004'),
+('c2000000-0004-0000-0000-000000000001','Matraslar','🛏️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/okpljsns_photo_5195110656934352874_x.jpg',1,'c1000000-0000-0000-0000-000000000004'),
 ('c2000000-0004-0000-0000-000000000002','Ko''rpalar va yostiqlar','🌙','https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400',2,'c1000000-0000-0000-0000-000000000004'),
 ('c2000000-0004-0000-0000-000000000003','Choyshab to''plamlar','🛏️','https://images.unsplash.com/photo-1588046130717-0eb0c9a3ba15?w=400',3,'c1000000-0000-0000-0000-000000000004'),
 ('c2000000-0004-0000-0000-000000000004','Dekorativ yostiqlar','🎀','https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400',4,'c1000000-0000-0000-0000-000000000004'),
-('c2000000-0004-0000-0000-000000000005','Uy pardalar','🪟','https://images.unsplash.com/photo-1513161455079-7dc1de15ef3e?w=400',5,'c1000000-0000-0000-0000-000000000004')
+('c2000000-0004-0000-0000-000000000005','Uy pardalar','🪟','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/h6w6jf3x_pardalar.jpg',5,'c1000000-0000-0000-0000-000000000004')
 ON CONFLICT (id) DO NOTHING;
 
 -- Qurilish va ta'mirlash subkategoriyalari (6 ta)
