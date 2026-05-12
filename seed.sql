@@ -145,7 +145,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Go'zallik va parvarish subkategoriyalari (5 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0012-0000-0000-000000000001','Parfyumeriya','🌸','https://images.unsplash.com/photo-1541643600914-78b084683702?w=400',1,'c1000000-0000-0000-0000-000000000012'),
+('c2000000-0012-0000-0000-000000000001','Parfyumeriya','🌸','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ryv1dpko_photo_5197362456748036700_y.jpg',1,'c1000000-0000-0000-0000-000000000012'),
 ('c2000000-0012-0000-0000-000000000002','Makiyaj','💄','https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400',2,'c1000000-0000-0000-0000-000000000012'),
 ('c2000000-0012-0000-0000-000000000003','Soch mahsulotlari','💇','https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',3,'c1000000-0000-0000-0000-000000000012'),
 ('c2000000-0012-0000-0000-000000000004','Teri parvarishi','🧴','https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400',4,'c1000000-0000-0000-0000-000000000012'),
