@@ -11,7 +11,7 @@ import { hapticFeedback } from "@/hooks/use-telegram";
 export default function Favorites() {
   const [, navigate] = useLocation();
   const { favorites } = useFavoritesStore();
-  const { data, isLoading } = useProducts({}, { enabled: favorites.length > 0 });
+  const { data, isLoading } = useProducts({ limit: 500 } as any, { enabled: favorites.length > 0 });
 
   const favoriteProducts = useMemo(() => {
     if (!data?.products) return [];

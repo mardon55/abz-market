@@ -51,7 +51,7 @@ router.get("/products", async (req, res) => {
   try {
     const {
       categoryId, search, minPrice, maxPrice, storeId, featured,
-      status, limit = "20", offset = "0", newOnly, sortBy,
+      status, limit = "500", offset = "0", newOnly, sortBy,
     } = req.query as Record<string, string>;
 
     const conditions = [];
