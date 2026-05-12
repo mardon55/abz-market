@@ -99,10 +99,10 @@ ON CONFLICT (id) DO NOTHING;
 -- Dekor va bezak subkategoriyalari (6 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0008-0000-0000-000000000001','Rasmlar va suratlar','🖼️','https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400',1,'c1000000-0000-0000-0000-000000000008'),
-('c2000000-0008-0000-0000-000000000002','Vazalar va guldanlar','🌸','https://images.unsplash.com/photo-1486325212027-8081e485255e?w=400',2,'c1000000-0000-0000-0000-000000000008'),
-('c2000000-0008-0000-0000-000000000003','Devor soatlari','🕐','https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',3,'c1000000-0000-0000-0000-000000000008'),
-('c2000000-0008-0000-0000-000000000004','Gilamlar','🎨','https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400',4,'c1000000-0000-0000-0000-000000000008'),
-('c2000000-0008-0000-0000-000000000005','Pardalar','🪟','https://images.unsplash.com/photo-1513161455079-7dc1de15ef3e?w=400',5,'c1000000-0000-0000-0000-000000000008'),
+('c2000000-0008-0000-0000-000000000002','Vazalar va guldanlar','🌸','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/4e9qhitc_photo_5197362456748036669_y.jpg',2,'c1000000-0000-0000-0000-000000000008'),
+('c2000000-0008-0000-0000-000000000003','Devor soatlari','🕐','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/jfx2lfcd_photo_5197362456748036671_y.jpg',3,'c1000000-0000-0000-0000-000000000008'),
+('c2000000-0008-0000-0000-000000000004','Gilamlar','🎨','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/qybmzo1d_photo_5197362456748036687_x.jpg',4,'c1000000-0000-0000-0000-000000000008'),
+('c2000000-0008-0000-0000-000000000005','Pardalar','🪟','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ivglqcp8_photo_5197362456748036690_y.jpg',5,'c1000000-0000-0000-0000-000000000008'),
 ('c2000000-0008-0000-0000-000000000006','Dekorativ yostiqlar','🎀','https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400',6,'c1000000-0000-0000-0000-000000000008')
 ON CONFLICT (id) DO NOTHING;
 
