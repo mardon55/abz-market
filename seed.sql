@@ -309,4 +309,66 @@ SELECT 'Kategoriyalar: ' || count(*) as stats FROM categories;
 SELECT 'Mahsulotlar: ' || count(*) as stats FROM products;
 SELECT 'Subkategoriyalar: ' || count(*) as stats FROM categories WHERE parent_id IS NOT NULL;
 SELECT 'Yetkazib berish zonalari: ' || count(*) as stats FROM delivery_zones;
-SELECT 'Bannerlar: ' || count(*) as stats FROM banners;
+-- ============================================================
+-- RASM YANGILANISHLARI (har restart da yangilanadi)
+-- ============================================================
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/7scd4frm_f95026e46c2bafd38e7ed2161b525785.webp' WHERE id = 'c2000000-0001-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/46fzfgci_what-should-be-a-childrens-room-for-a-girl-layout-colors-and-design.webp' WHERE id = 'c2000000-0001-0000-0000-000000000004';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ciguc262_74412799b8fcbf84ab07d2ebc41bfe7e.webp' WHERE id = 'c2000000-0001-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/8jtzh2pv_without-handle.webp' WHERE id = 'c2000000-0001-0000-0000-000000000006';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/tkjayp8v_1737548602.webp' WHERE id = 'c2000000-0001-0000-0000-000000000007';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/xq09rjmd_img-20240212-231943-539.jpg' WHERE id = 'c2000000-0001-0000-0000-000000000008';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pfbsxkfx_4454654.jpg' WHERE id = 'c2000000-0001-0000-0000-000000000010';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pqt6xxhg_t_product_540_high.webp' WHERE id = 'c2000000-0001-0000-0000-000000000011';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/uaat8o2r_image.webp' WHERE id = 'c2000000-0001-0000-0000-000000000012';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/bz1xatyt_4365012.jpg' WHERE id = 'c2000000-0001-0000-0000-000000000013';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pcw5o48f_image%20%281%29.webp' WHERE id = 'c2000000-0001-0000-0000-000000000014';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/310ylugg_furnitura-kont.jpg' WHERE id = 'c2000000-0001-0000-0000-000000000015';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/yuofoz2d_61458-588%402x.jpg' WHERE id = 'c2000000-0001-0000-0000-000000000016';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ezastlhx_f4596c5f1a4b3ddf6b3f7f79e070.webp' WHERE id = 'c2000000-0001-0000-0000-000000000017';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/akbr7hjq_7f9571f4a4877d6c1abbb6e6c3e0.webp' WHERE id = 'c2000000-0001-0000-0000-000000000018';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/cidpuyh8_pishirish%20idishlar.jpeg' WHERE id = 'c2000000-0002-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ucovcku9_dasturxon%20bezaklari.webp' WHERE id = 'c2000000-0002-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/525k5gsq_saqlash%20va%20tartib.jpg' WHERE id = 'c2000000-0002-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/7diqxoa9_to%27qimachilik.jpg' WHERE id = 'c2000000-0002-0000-0000-000000000007';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/x4cokmnx_Gemini_Generated_Image_rp1zl2rp1zl2rp1z.png' WHERE id = 'c2000000-0002-0000-0000-000000000008';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/us3ok51t_muzlatgich.jpg' WHERE id = 'c2000000-0003-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/v073hsv9_televezor.jpg' WHERE id = 'c2000000-0003-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/vvtsik30_konditsioner.webp' WHERE id = 'c2000000-0003-0000-0000-000000000004';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/j2f1cuyj_misirupka.webp' WHERE id = 'c2000000-0003-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/krxlxob4_chang%20yutgich.jpg' WHERE id = 'c2000000-0003-0000-0000-000000000006';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/dcbub0wt_ventilyator.webp' WHERE id = 'c2000000-0003-0000-0000-000000000007';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/5h75z0yx_tikuv%20mashinasi.webp' WHERE id = 'c2000000-0003-0000-0000-000000000008';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/21wm6wuy_dazmol.jpg' WHERE id = 'c2000000-0003-0000-0000-000000000009';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/s5f98cg2_fen.jpg' WHERE id = 'c2000000-0003-0000-0000-000000000010';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/okpljsns_photo_5195110656934352874_x.jpg' WHERE id = 'c2000000-0004-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/h6w6jf3x_pardalar.jpg' WHERE id = 'c2000000-0004-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ephozvdp_photo_5197362456748036646_y.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/hzi1ja24_photo_5197362456748036653_x.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/hrmes5ff_bo%27yoqlar.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/fvu3caa9_santexnika.jpeg' WHERE id = 'c2000000-0005-0000-0000-000000000004';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/21pvim81_photo_5197362456748036655_x%20%281%29.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000006';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/zhkrdmui_gul%20qogozlar.jpg' WHERE id = 'c2000000-0005-0000-0000-000000000008';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/pqmd0dsh_photo_5197362456748036656_y.jpg' WHERE id = 'c2000000-0006-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/og0z9bo4_photo_5197362456748036665_y.jpg' WHERE id = 'c2000000-0006-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/4e9qhitc_photo_5197362456748036669_y.jpg' WHERE id = 'c2000000-0008-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/jfx2lfcd_photo_5197362456748036671_y.jpg' WHERE id = 'c2000000-0008-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/qybmzo1d_photo_5197362456748036687_x.jpg' WHERE id = 'c2000000-0008-0000-0000-000000000004';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ivglqcp8_photo_5197362456748036690_y.jpg' WHERE id = 'c2000000-0008-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/w7gdg5th_photo_5197362456748036693_x.jpg' WHERE id = 'c2000000-0011-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/vih2ob8a_photo_5197362456748036695_y.jpg' WHERE id = 'c2000000-0011-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ryv1dpko_photo_5197362456748036700_y.jpg' WHERE id = 'c2000000-0012-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/jw8ddg4h_photo_5197362456748036705_y.jpg' WHERE id = 'c2000000-0013-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/do4cqv1w_photo_5197362456748036706_y.jpg' WHERE id = 'c2000000-0013-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/gw59ofeq_photo_5197362456748036710_y.jpg' WHERE id = 'c2000000-0013-0000-0000-000000000004';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/j76rr4ei_o%27yinchoqlar.JPG' WHERE id = 'c2000000-0014-0000-0000-000000000001';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ixxnlild_aravachalari.jpg' WHERE id = 'c2000000-0014-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/fahu2ft4_bolalar%20mebeli.jpg' WHERE id = 'c2000000-0014-0000-0000-000000000003';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/mcjh82mk_oziq%20ovqat.jpg' WHERE id = 'c2000000-0014-0000-0000-000000000005';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/y4r2zcyr_photo_5197362456748036720_x.jpg' WHERE id = 'c2000000-0015-0000-0000-000000000002';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/bygxl2he_photo_5197362456748036714_x.jpg' WHERE id = 'c2000000-0015-0000-0000-000000000007';
+UPDATE categories SET image = 'https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/y9m14ouv_photo_5197362456748036730_x.jpg' WHERE id = 'c2000000-0015-0000-0000-000000000006';
+
+SELECT 'Rasmlar yangilandi: ' || count(*) || ' ta kategoriya' as result FROM categories WHERE image LIKE '%customer-assets%';
+
+
