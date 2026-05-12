@@ -7,7 +7,7 @@ import { ProductCard } from "@/components/ui/ProductCard";
 export default function StoreProfile() {
   const [, params] = useRoute("/store/:id");
   const { data: store, isLoading } = useStoreProfile(params?.id || "");
-  const { data: products } = useProducts({ storeId: params?.id, limit: 500 } as any);
+  const { data: products } = useProducts({ storeId: params?.id } as any);
 
   if (isLoading || !store) return <MobileLayout showBack><div className="p-4">Yuklanmoqda...</div></MobileLayout>;
 

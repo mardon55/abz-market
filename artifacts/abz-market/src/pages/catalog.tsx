@@ -107,7 +107,6 @@ export default function Catalog() {
   const { data: productsData, isLoading: prodLoading } = useProducts({
     search: searchQuery || undefined,
     categoryId: filterCategoryId,
-    limit: 500,
   } as any);
 
   const products = productsData?.products ?? [];

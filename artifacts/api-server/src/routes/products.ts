@@ -51,7 +51,7 @@ router.get("/products", async (req, res) => {
   try {
     const {
       categoryId, search, minPrice, maxPrice, storeId, featured,
-      status, limit = "500", offset = "0", newOnly, sortBy,
+      status, limit, offset = "0", newOnly, sortBy,
     } = req.query as Record<string, string>;
 
     const conditions = [];
@@ -134,15 +134,16 @@ router.get("/products", async (req, res) => {
       ? desc(productsTable.createdAt)
       : desc(productsTable.salesCount);
 
-    const products = await db
+    const qb = db
       .select(PRODUCT_SELECT)
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .leftJoin(storesTable, eq(productsTable.storeId, storesTable.id))
       .where(where)
       .orderBy(order)
-      .limit(parseInt(limit))
-      .offset(parseInt(offset));
+      .offset(parseInt(offset ?? "0"));
+
+    const products = await (limit ? qb.limit(parseInt(limit)) : qb);
 
     const total = await db
       .select({ count: sql<number>`count(*)` })
