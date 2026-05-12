@@ -212,7 +212,7 @@ INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0001-0000-0000-000000000015','Mebel furniturasi','🔩','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/310ylugg_furnitura-kont.jpg',15,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000016','Yashash xonasi','🛋️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/yuofoz2d_61458-588%402x.jpg',16,'c1000000-0000-0000-0000-000000000001'),
 ('c2000000-0001-0000-0000-000000000017','Koridor va dahliz','🚪','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ezastlhx_f4596c5f1a4b3ddf6b3f7f79e070.webp',17,'c1000000-0000-0000-0000-000000000001'),
-('c2000000-0001-0000-0000-000000000018','Oynalar va zerkalo','🪞','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',18,'c1000000-0000-0000-0000-000000000001')
+('c2000000-0001-0000-0000-000000000018','Oynalar va zerkalo','🪞','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/akbr7hjq_7f9571f4a4877d6c1abbb6e6c3e0.webp',18,'c1000000-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
 -- Qurilish va ta'mirlash — 2 ta yangi (davomi: 7,8)
