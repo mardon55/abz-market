@@ -1194,6 +1194,219 @@ export const CATEGORY_SPECS: CategorySpec[] = [
       { key: "warranty",      label: "Kafolat",          type: "select", options: ["6 oy", "12 oy", "Kafolatsiz"] },
     ],
   },
+
+  // ══════════════════ YANGI QO'SHILGAN KATEGORIYALAR ══════════════════
+
+  // ── MEBEL YANGI SUBLAR ────────────────────────────────────────────────────────
+  {
+    names: ["Buyurtma mebel"], emoji: "🛠️",
+    fields: [
+      { key: "mebelType",  label: "Mebel turi",           type: "select", options: ["Shkaf (kupe/klassik)","Oshxona garnitur","Kiyinish xonasi","Bola xonasi","Yotoqxona garnitur","Divan","Stol","Javon","Boshqa"] },
+      { key: "corpusMat",  label: "Korpus materiali",     type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Fasad materiali",      type: "select", options: FASAD_OPTIONS },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Kulrang" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 200" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 240" },
+      { key: "depth",      label: "Chuqurligi",           type: "number", unit: "sm",  placeholder: "masalan: 60" },
+      { key: "design",     label: "3D dizayn taqdim etiladi", type: "toggle" },
+      { key: "install",    label: "O'rnatish xizmati bilan",  type: "toggle" },
+      { key: "warranty",   label: "Kafolat",              type: "select", options: ["6 oy","1 yil","2 yil","3 yil"] },
+    ],
+  },
+  {
+    names: ["Mebel furniturasi"], emoji: "🔩",
+    fields: [
+      { key: "hardwareType", label: "Furnitura turi",     type: "select", options: ["Ruchka (tutqich)","Petlya (loop)","Zamok","Kanallar (rol)","Yulduzcha (tayanch)","To'siq (amortizator)","Mebel oyog'i","Magnit tutgich","Slayder tizim","Vida va qoziqlar"] },
+      { key: "material",   label: "Materiali",            type: "select", options: ["Xrom po'lat","Qora po'lat","Bronza","Oltin","Plastik (ABS)","Nikel","Mis","Alyuminiy"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Xrom, Matli qora, Bronza" },
+      { key: "brand",      label: "Brend",                type: "text",   placeholder: "masalan: Blum, Hettich, Hafele, Grass" },
+      { key: "packCount",  label: "To'plamdagi dona",     type: "select", options: ["1","2","4","6","8","10","12","20+"] },
+      { key: "compat",     label: "Mos mebel materiali",  type: "text",   placeholder: "masalan: LDSP, MDF, Massiv yog'och" },
+    ],
+  },
+  {
+    names: ["Yashash xonasi"], emoji: "🛋️",
+    fields: [
+      { key: "setType",    label: "To'plam turi",         type: "select", options: ["Divan + kreslo to'plam","Faqat divan","Modul divan","Gostinnaya garnitur (shkaf+shelf+kofe stol)","To'liq yashash xonasi garnitur"] },
+      { key: "corpusMat",  label: "Korpus materiali",     type: "select", options: KORPUS_OPTIONS },
+      { key: "facadeMat",  label: "Qoplama / fasad",      type: "select", options: ["Haqiqiy teri","Eko-teri","Velur","Mato","Bukle","Shenil","Laminat","MDF bo'yalgan","Akrilik"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Kulrang, Bej, To'q jigarrang" },
+      { key: "style",      label: "Dizayn uslubi",        type: "select", options: ["Zamonaviy (modern)","Klassik","Minimalizm","Loft / Industrial","Art Deco","Skandinavcha"] },
+      { key: "foldable",   label: "Yotiladigan divan",    type: "toggle" },
+      { key: "storage",    label: "Qutilar bilan",        type: "toggle" },
+      { key: "assembly",   label: "Yig'ilgan holda yetkazish", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Koridor va dahliz"], emoji: "🚪",
+    fields: [
+      { key: "hallType",   label: "Mebel turi",           type: "select", options: ["Tayanchli shkaf (veshank)","Poyabzal shkafi","Ko'zgu + shelf","Devorga osish tizimi","Polkali stend","To'liq garnitur (kombo)"] },
+      { key: "corpusMat",  label: "Korpus materiali",     type: "select", options: KORPUS_OPTIONS },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Wenge, Kulrang" },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 100" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 200" },
+      { key: "mirror",     label: "Ko'zgu bilan",         type: "toggle" },
+      { key: "shoeRack",   label: "Poyabzal rafi bilan",  type: "toggle" },
+      { key: "assembly",   label: "Yig'ilgan holda yetkazish", type: "toggle" },
+    ],
+  },
+  {
+    names: ["Oynalar va zerkalo"], emoji: "🪞",
+    fields: [
+      { key: "mirrorType", label: "Ko'zgu turi",          type: "select", options: ["Devorga osuvchi","Erkin turuvchi (pol ko'zgusi)","Hammom ko'zgusi","Makiyaj ko'zgusi","Eshik ko'zgusi","Dekorativ ramkali"] },
+      { key: "shape",      label: "Shakli",               type: "select", options: ["To'rtburchak","Oval","Doira","Noodatiy (art)","To'liq bo'y"] },
+      { key: "frameMat",   label: "Ramka materiali",      type: "select", options: ["Ramsiz","Metall (xrom)","Metall (qora)","Bronza / Oltin","Yog'och massiv","MDF bo'yalgan","Plastik","Alyuminiy"] },
+      { key: "width",      label: "Eni",                  type: "number", unit: "sm",  placeholder: "masalan: 60" },
+      { key: "height",     label: "Balandligi",           type: "number", unit: "sm",  placeholder: "masalan: 80" },
+      { key: "color",      label: "Ramka rangi",          type: "text",   placeholder: "masalan: Qora, Bronza, Oq" },
+      { key: "backlight",  label: "LED yoritish bilan",   type: "toggle" },
+      { key: "antiFog",    label: "Bug'lanmaydigan (anti-fog)", type: "toggle" },
+      { key: "wallMount",  label: "O'rnatish moslamalari bilan", type: "toggle" },
+    ],
+  },
+
+  // ── UY-RO'ZG'OR YANGI SUBLAR ─────────────────────────────────────────────────
+  {
+    names: ["To'qimachilik"], emoji: "🧶",
+    fields: [
+      { key: "itemType",   label: "Mahsulot turi",        type: "select", options: ["Ip (yarn)","Gazlama (mato)","Tikuv matolari","To'qimachilik asboblari","Kashtachilik to'plami","Dastgoh aksessuarlari"] },
+      { key: "material",   label: "Materiali",            type: "select", options: ["Paxta","Jun (wool)","Akril","Poliester","Ipak","Bambuk","Zig'ir (linen)","Mikrofibra","Naylon","Gibrid"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Qizil, Ko'k, Aralash ranglar" },
+      { key: "weight",     label: "Og'irligi / Uzunligi", type: "text",   placeholder: "masalan: 100 g / 200 m" },
+      { key: "thickness",  label: "Ip yo'g'onligi",       type: "select", options: ["Juda nozik (fingering)","Nozik (sock)","O'rtacha (DK)","Yo'g'on (worsted)","Juda yo'g'on (bulky)","Super yo'g'on (super bulky)"] },
+      { key: "brand",      label: "Brend",                type: "text",   placeholder: "masalan: Drops, Alize, Gazzal, Kartopu" },
+    ],
+  },
+  {
+    names: ["Xo'jalik buyumlari"], emoji: "🏠",
+    fields: [
+      { key: "itemType",   label: "Buyum turi",           type: "select", options: ["Chelak","Plastik qozon","Idish qopqog'i","Mop to'plami","Supurgi + dastaki","Lattalar","Qo'lqop (uy ishi)","Ko'z qopchiq","Hammom gilami","Rezina gilam","Boshqa xo'jalik buyum"] },
+      { key: "material",   label: "Materiali",            type: "select", options: ["Plastik (PP)","Metall","Paslanmaz po'lat","Alyuminiy","Rezina","Mato","Bambuk"] },
+      { key: "color",      label: "Rangi",                type: "text",   placeholder: "masalan: Oq, Kulrang, Ko'k" },
+      { key: "size",       label: "O'lchami / Hajmi",     type: "text",   placeholder: "masalan: 10 litr, 30×20 sm" },
+      { key: "packCount",  label: "To'plamdagi dona",     type: "select", options: ["1 dona","2 dona","3 dona","5 dona","10 dona","To'plam"] },
+    ],
+  },
+
+  // ── MAISHIY TEXNIKA YANGI SUBLAR ─────────────────────────────────────────────
+  {
+    names: ["Tikuv mashinalari"], emoji: "🧵",
+    fields: [
+      { key: "brand",       label: "Brend",               type: "text",   placeholder: "masalan: Singer, Brother, Janome, Juki" },
+      { key: "machineType", label: "Mashina turi",        type: "select", options: ["Mexanik","Elektr (avtomatik)","Kompyuter (raqamli)","Overlock","Ko'p funksiyali (kombinatsiya)"] },
+      { key: "stitchCount", label: "Tikuv turlari soni",  type: "select", options: ["10–20","21–50","51–100","101–200","200+"] },
+      { key: "speed",       label: "Tezligi",             type: "number", unit: "tikiş/min", placeholder: "masalan: 800" },
+      { key: "motorPow",    label: "Motor quvvati",       type: "number", unit: "W", placeholder: "masalan: 100" },
+      { key: "freeArm",     label: "Free-arm funksiyasi", type: "toggle" },
+      { key: "autoThread",  label: "Avtomatik ip tortish", type: "toggle" },
+      { key: "warranty",    label: "Kafolat",             type: "select", options: ["1 yil","2 yil","3 yil","5 yil"] },
+    ],
+  },
+  {
+    names: ["Dazmollar va bug'lagichlar"], emoji: "👔",
+    fields: [
+      { key: "brand",       label: "Brend",               type: "text",   placeholder: "masalan: Philips, Tefal, Bosch, Rowenta" },
+      { key: "ironType",    label: "Qurilma turi",        type: "select", options: ["Elektr dazmol","Bug' dazmol (generatorli)","Vertikal bug'lagich","Ko'chma bug'lagich","Avtomatik (smart)"] },
+      { key: "power",       label: "Quvvati",             type: "number", unit: "W", placeholder: "masalan: 2400" },
+      { key: "pressure",    label: "Bug' bosimi",         type: "text",   placeholder: "masalan: 5.5 bar, 6 bar" },
+      { key: "tankVol",     label: "Suv idishi hajmi",    type: "text",   placeholder: "masalan: 300 ml, 1.5 litr" },
+      { key: "soleMat",     label: "Dazmol tagligi",      type: "select", options: ["Keramika","Titan","Paslanmaz po'lat","Durilium","Eloxal alyuminiy"] },
+      { key: "tempCtrl",    label: "Harorat rostlash",    type: "toggle" },
+      { key: "selfClean",   label: "Tozalanish funksiyasi", type: "toggle" },
+      { key: "warranty",    label: "Kafolat",             type: "select", options: ["1 yil","2 yil","3 yil"] },
+    ],
+  },
+  {
+    names: ["Go'zallik uchun texnika"], emoji: "💅",
+    fields: [
+      { key: "brand",       label: "Brend",               type: "text",   placeholder: "masalan: Philips, Braun, Dyson, Remington" },
+      { key: "beautyType",  label: "Qurilma turi",        type: "select", options: ["Soch quritgich (fen)","Soch tekislagich (planka)","Lokonga (qisqich)","Elektr qirgich (ayol)","Yuz tozalagich","Yuz massajori","Tikuvchi (epilator)","Tırnoq quritgich (UV/LED)","Boshqa"] },
+      { key: "power",       label: "Quvvati",             type: "number", unit: "W", placeholder: "masalan: 2000" },
+      { key: "voltage",     label: "Kuchlanish",          type: "select", options: ["220V","Dual (110/220V)","USB zaryadka"] },
+      { key: "heatSetting", label: "Harorat sozlamalari", type: "select", options: ["1 daraja","2 daraja","3 daraja","5+ daraja","Raqamli (LCD)"] },
+      { key: "ionizer",     label: "Ionizator (soch parvarishi)", type: "toggle" },
+      { key: "wireless",    label: "Simsiz (akkumulyatorli)", type: "toggle" },
+      { key: "warranty",    label: "Kafolat",             type: "select", options: ["1 yil","2 yil","3 yil"] },
+    ],
+  },
+
+  // ── QURILISH VA TA'MIRLASH YANGI SUBLAR ──────────────────────────────────────
+  {
+    names: ["Elektr asboblari"], emoji: "🔌",
+    fields: [
+      { key: "brand",       label: "Brend",               type: "text",   placeholder: "masalan: Bosch, Makita, DeWalt, Hilti" },
+      { key: "toolType",    label: "Asbob turi",          type: "select", options: ["Burg'ulama (drel)","Perforator","Bolg'a sima (shlifovka)","Elektr arra (tsirkulyar)","Jigsaw (lob-arra)","Burchak toshlagich (UShM)","Kompressor","Lehimlagich","Elektr planer","Multi-tool","Boshqa"] },
+      { key: "power",       label: "Quvvati",             type: "number", unit: "W", placeholder: "masalan: 1200" },
+      { key: "voltage",     label: "Kuchlanish",          type: "select", options: ["12V (akkumulyator)","18V (akkumulyator)","20V (akkumulyator)","220V (setli)","Dual (akkumulyator+setli)"] },
+      { key: "speed",       label: "Aylanish tezligi",    type: "text",   placeholder: "masalan: 0–3000 rpm, variable" },
+      { key: "cordless",    label: "Akkumulyatorli (cordless)", type: "toggle" },
+      { key: "sds",         label: "SDS qisqich (perforator)",  type: "toggle" },
+      { key: "warranty",    label: "Kafolat",             type: "select", options: ["1 yil","2 yil","3 yil","5 yil"] },
+    ],
+  },
+  {
+    names: ["Gul qog'ozlar va elimlar"], emoji: "🎨",
+    fields: [
+      { key: "itemType",   label: "Mahsulot turi",        type: "select", options: ["Devor tapetasi (gul qog'oz)","Dekorativ plyonka","Foto tapeta","Flizelin tapeta","3D panel","Elim (kley)","Grunt (astar)","Silikon germetik","Akrilik germetik","Montaj ko'puk"] },
+      { key: "material",   label: "Materiali",            type: "select", options: ["Qog'oz asosli","Vinil","Fleece (flizelin)","Foto print","3D material","Polimer ko'puk","Keramika"] },
+      { key: "width",      label: "Rul eni",              type: "number", unit: "sm",  placeholder: "masalan: 53" },
+      { key: "length",     label: "Uzunligi",             type: "number", unit: "m",   placeholder: "masalan: 10" },
+      { key: "color",      label: "Rangi / Dizayni",      type: "text",   placeholder: "masalan: Kulrang zolot, Beton effekt, Oq" },
+      { key: "washable",   label: "Yuviladigan sirt",     type: "toggle" },
+    ],
+  },
+
+  // ── GO'ZALLIK VA PARVARISH YANGI SUBLAR ──────────────────────────────────────
+  {
+    names: ["Onalar va chaqaloqlar"], emoji: "🍼",
+    fields: [
+      { key: "brand",      label: "Brend",               type: "text",   placeholder: "masalan: Chicco, Avent, Medela, Johnson's" },
+      { key: "itemType",   label: "Mahsulot turi",        type: "select", options: ["Ko'krak sog'ish asbobi","Shisha butilka","Chaqaloq so'rg'ich","Bolalar kremi","Bolalar shampuni","Bolalar yog'i","Bolalar nam sochig'i","Qorin belbog'i (bandaj)","Hamiladorlik kremi","Bolalar sovuni","Ona parvarishi to'plami"] },
+      { key: "ageGroup",   label: "Yosh guruh",          type: "select", options: ["0+ (yangi tug'ilgan)","3+ oy","6+ oy","12+ oy (1 yosh)","Hamiladorlik davri","Universal"] },
+      { key: "volume",     label: "Hajmi / Miqdori",     type: "text",   placeholder: "masalan: 250 ml, 100 g, 1 dona" },
+      { key: "organic",    label: "Organik / BIO tarkib", type: "toggle" },
+      { key: "allergenFree", label: "Gipoallergen",      type: "toggle" },
+      { key: "pediatric",  label: "Pediatr tavsiyasi",   type: "toggle" },
+    ],
+  },
+  {
+    names: ["Shaxsiy gigiena"], emoji: "🧼",
+    fields: [
+      { key: "brand",      label: "Brend",               type: "text",   placeholder: "masalan: Colgate, Oral-B, Nivea, Dove, Rexona" },
+      { key: "itemType",   label: "Mahsulot turi",        type: "select", options: ["Tish pastasi","Tish cho'tkasi","Elektr tish cho'tkasi","Og'iz chayqash suyuqligi","Dezodorant","Antibakterial sabun","Dush geli","Yuz yuvish geli","Yuz skrabi","Taroq / taroqcha","Qo'l tozalagich","Sochiq (hammom)","Gigiena paketi"] },
+      { key: "gender",     label: "Jins",                type: "select", options: ["Erkaklar","Ayollar","Universal","Bolalar"] },
+      { key: "volume",     label: "Hajmi",               type: "text",   placeholder: "masalan: 100 ml, 200 ml, 1 dona" },
+      { key: "scent",      label: "Hidi",                type: "select", options: ["Hidsiz","Limon","Lavanda","Yashil choy","Menta","Dengiz","O'tlar aralashmasi"] },
+      { key: "ecofriendly", label: "Ekologik tarkibli",  type: "toggle" },
+      { key: "antibac",    label: "Antibakterial",       type: "toggle" },
+    ],
+  },
+
+  // ── KITOBLAR VA KANSELYARIYA ──────────────────────────────────────────────────
+  {
+    names: ["Kitoblar"], emoji: "📖",
+    fields: [
+      { key: "genre",      label: "Janr",                type: "select", options: ["Roman / Badiiy adabiyot","Ilmiy-ommabop","O'quv qo'llanma (darslik)","Bolalar kitobi","Biznes va moliya","Tarix","Falsafa","Psixologiya","Tillar o'rganish","She'riyat","Diniy / Ma'naviy","Detektiv / Triller","Ilmiy fantastika","Biografiya","Ovqatpazlik","Boshqa"] },
+      { key: "lang",       label: "Tili",                type: "select", options: ["O'zbek","Rus","Ingliz","O'zbek + Rus","O'zbek + Ingliz","Arabiy","Ko'p til"] },
+      { key: "author",     label: "Muallif",             type: "text",   placeholder: "masalan: Chulpan, Abdulla Qodiriy, Osho" },
+      { key: "publisher",  label: "Nashriyot",           type: "text",   placeholder: "masalan: O'qituvchi, Yangi asr avlodi" },
+      { key: "year",       label: "Nashr yili",          type: "text",   placeholder: "masalan: 2023, 2024" },
+      { key: "coverType",  label: "Muqova turi",         type: "select", options: ["Qattiq muqova","Yumshoq muqova","Spiral muqova","Elektron (PDF/EPUB)"] },
+      { key: "pages",      label: "Sahifalar soni",      type: "number", unit: "bet",  placeholder: "masalan: 320" },
+      { key: "condition",  label: "Holati",              type: "select", options: ["Yangi (muhr yopiq)","Yaxshi holat","O'rtacha holat"] },
+    ],
+  },
+  {
+    names: ["Kanselyariya tovarlari"], emoji: "✏️",
+    fields: [
+      { key: "itemType",   label: "Mahsulot turi",        type: "select", options: ["Ruchka (ballpoint/gel)","Qalam (oddiy/ranga)","Marker / Flomaster","Daftar","Bloknot / Planner","Papka va fayl","Qisgich (skotch/stepler)","Qaychi","Ko'chirma qog'ozi","Maket pichog'i","O'chirg'ich","Linejka","Kompas va burchaklar","Geometriya to'plami","Renglar to'plami","Kley / Elim","Boshqa"] },
+      { key: "brand",      label: "Brend",               type: "text",   placeholder: "masalan: Deli, Faber-Castell, Pilot, BIC" },
+      { key: "color",      label: "Rangi",               type: "text",   placeholder: "masalan: Ko'k, Qizil, Qora, Aralash" },
+      { key: "packCount",  label: "To'plamdagi dona",     type: "select", options: ["1 dona","6 dona","10 dona","12 dona","20 dona","50 dona","100 dona","To'plam (set)"] },
+      { key: "size",       label: "Daftar / qog'oz o'lchami", type: "select", options: ["A6 (148×105 mm)","A5 (210×148 mm)","A4 (297×210 mm)","A3 (420×297 mm)","Boshqa"] },
+      { key: "forStudents", label: "O'quvchilar uchun",  type: "toggle" },
+    ],
+  },
 ];
 
 // ── Find spec for a given category name ────────────────────────
@@ -1285,6 +1498,23 @@ export const KW_MAP: [string[], string[]][] = [
   [["kamar","belbog","пояс","belt"],                              ["Kamarlar"]],
   [["shlyapa","qalpoq","kepka","hat","кепка","бейсболка"],        ["Shlyapalar va qalpoqlar"]],
   [["telefon chexol","chexol","чехол","case","zaryad kabel","kabel","zaryadka"], ["Telefon aksessuarlari"]],
+  // ── Yangi qo'shilgan kategoriyalar
+  [["buyurtma mebel","individual mebel","заказная мебель","custom mebel"],      ["Buyurtma mebel"]],
+  [["furnitura","mebel ruchka","petlya","zamok mebel","blum","hettich"],        ["Mebel furniturasi"]],
+  [["yashash xonasi mebel","gostinnaya","mehmonxona mebel","living room"],      ["Yashash xonasi"]],
+  [["koridor","dahliz","прихожая","veshank","poyabzal shkaf","hallway"],        ["Koridor va dahliz"]],
+  [["oyna","ko'zgu","zerkalo","mirror","поворотное зеркало"],                   ["Oynalar va zerkalo"]],
+  [["tikuv mashin","sewing machine","overlock","швейная","brother singer"],     ["Tikuv mashinalari"]],
+  [["dazmol","bug'lagich","утюг","steam iron","парогенератор"],                 ["Dazmollar va bug'lagichlar"]],
+  [["soch quritgich","fen","planka","lokonga","epilator","go'zallik texnika"],  ["Go'zallik uchun texnika"]],
+  [["ip yarn","to'qimachilik","gazlama","mato tikuv","kashtachilik","yarn"],    ["To'qimachilik"]],
+  [["chelak","mop","xo'jalik","supurgi dastagi","xo'jalik buyum"],              ["Xo'jalik buyumlari"]],
+  [["perforator","burg'ulama","дрель","bolg'a sima","UShM","elektr asbob"],    ["Elektr asboblari"]],
+  [["gul qog'oz","tapeta","деkor plyonka","обои","kley devor","elim devor"],   ["Gul qog'ozlar va elimlar"]],
+  [["chaqaloq kremi","ko'krak sog'","onalar parvarish","butilka chaqaloq"],     ["Onalar va chaqaloqlar"]],
+  [["tish pastasi","dezodorant","sabun","dush geli","gigiena","shaxsiy paket"], ["Shaxsiy gigiena"]],
+  [["kitob","roman","darslik","adabiyot","nashr","muallif","she'riyat"],        ["Kitoblar"]],
+  [["qalam","ruchka","daftar","kanselyar","marker","bloknot","stepler"],        ["Kanselyariya tovarlari"]],
 ];
 
 export function detectCategory(name: string, cats: Category[]): string {
