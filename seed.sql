@@ -173,12 +173,12 @@ ON CONFLICT (id) DO NOTHING;
 -- Aksessuarlar subkategoriyalari (8 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0015-0000-0000-000000000001','Sumkalar','👜','https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400',1,'c1000000-0000-0000-0000-000000000015'),
-('c2000000-0015-0000-0000-000000000002','Hamyonlar','👛','https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400',2,'c1000000-0000-0000-0000-000000000015'),
+('c2000000-0015-0000-0000-000000000002','Hamyonlar','👛','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/y4r2zcyr_photo_5197362456748036720_x.jpg',2,'c1000000-0000-0000-0000-000000000015'),
 ('c2000000-0015-0000-0000-000000000003','Zargarlik va bijuteriya','💍','https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400',3,'c1000000-0000-0000-0000-000000000015'),
 ('c2000000-0015-0000-0000-000000000004','Soatlar','⌚','https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',4,'c1000000-0000-0000-0000-000000000015'),
 ('c2000000-0015-0000-0000-000000000005','Ko''zoynak','🕶️','https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',5,'c1000000-0000-0000-0000-000000000015'),
-('c2000000-0015-0000-0000-000000000006','Kamarlar','🪢','https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400',6,'c1000000-0000-0000-0000-000000000015'),
-('c2000000-0015-0000-0000-000000000007','Shlyapalar va qalpoqlar','🧢','https://images.unsplash.com/photo-1521369909029-2afed882baaa?w=400',7,'c1000000-0000-0000-0000-000000000015'),
+('c2000000-0015-0000-0000-000000000006','Kamarlar','🪢','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/y9m14ouv_photo_5197362456748036730_x.jpg',6,'c1000000-0000-0000-0000-000000000015'),
+('c2000000-0015-0000-0000-000000000007','Shlyapalar va qalpoqlar','🧢','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/bygxl2he_photo_5197362456748036714_x.jpg',7,'c1000000-0000-0000-0000-000000000015'),
 ('c2000000-0015-0000-0000-000000000008','Telefon aksessuarlari','📱','https://images.unsplash.com/photo-1523206489230-c012c64b2b48?w=400',8,'c1000000-0000-0000-0000-000000000015')
 ON CONFLICT (id) DO NOTHING;
 
