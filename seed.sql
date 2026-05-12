@@ -50,10 +50,10 @@ ON CONFLICT (id) DO NOTHING;
 -- Uy-ro'zg'or subkategoriyalari (6 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ('c2000000-0002-0000-0000-000000000001','Idish-tovoq','🍽️','https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400',1,'c1000000-0000-0000-0000-000000000002'),
-('c2000000-0002-0000-0000-000000000002','Pishirish idishlari','🥘','https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400',2,'c1000000-0000-0000-0000-000000000002'),
-('c2000000-0002-0000-0000-000000000003','Dasturxon bezaklari','🎂','https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=400',3,'c1000000-0000-0000-0000-000000000002'),
+('c2000000-0002-0000-0000-000000000002','Pishirish idishlari','🥘','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/cidpuyh8_pishirish%20idishlar.jpeg',2,'c1000000-0000-0000-0000-000000000002'),
+('c2000000-0002-0000-0000-000000000003','Dasturxon bezaklari','🎂','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/ucovcku9_dasturxon%20bezaklari.webp',3,'c1000000-0000-0000-0000-000000000002'),
 ('c2000000-0002-0000-0000-000000000004','Tozalash buyumlari','🧹','https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',4,'c1000000-0000-0000-0000-000000000002'),
-('c2000000-0002-0000-0000-000000000005','Saqlash va tartib','📦','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',5,'c1000000-0000-0000-0000-000000000002'),
+('c2000000-0002-0000-0000-000000000005','Saqlash va tartib','📦','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/525k5gsq_saqlash%20va%20tartib.jpg',5,'c1000000-0000-0000-0000-000000000002'),
 ('c2000000-0002-0000-0000-000000000006','Hammom aksessuarlar','🛁','https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400',6,'c1000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
@@ -202,8 +202,8 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Uy-ro'zg'or — 2 ta yangi (davomi: 7,8)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0002-0000-0000-000000000007','To''qimachilik','🧶','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',7,'c1000000-0000-0000-0000-000000000002'),
-('c2000000-0002-0000-0000-000000000008','Xo''jalik buyumlari','🏠','https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',8,'c1000000-0000-0000-0000-000000000002')
+('c2000000-0002-0000-0000-000000000007','To''qimachilik','🧶','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/7diqxoa9_to%27qimachilik.jpg',7,'c1000000-0000-0000-0000-000000000002'),
+('c2000000-0002-0000-0000-000000000008','Xo''jalik buyumlari','🏠','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/x4cokmnx_Gemini_Generated_Image_rp1zl2rp1zl2rp1z.png',8,'c1000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
 -- Mebel — 5 ta yangi (davomi: 14,15,16,17,18)
