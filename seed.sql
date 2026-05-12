@@ -183,6 +183,57 @@ INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
+-- 3. YANGI ASOSIY KATEGORIYA
+-- ============================================================
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c1000000-0000-0000-0000-000000000016','Kitoblar va kanselyariya','📚','https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&h=300&fit=crop',16,NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 3a. YANGI SUB-KATEGORIYALAR (mavjud kategoriyalarga)
+-- ============================================================
+
+-- Maishiy texnika — 3 ta yangi (davomi: 8,9,10)
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0003-0000-0000-000000000008','Tikuv mashinalari','🧵','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',8,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000009','Dazmollar va bug''lagichlar','👔','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',9,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000010','Go''zallik uchun texnika','💅','https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',10,'c1000000-0000-0000-0000-000000000003')
+ON CONFLICT (id) DO NOTHING;
+
+-- Uy-ro'zg'or — 2 ta yangi (davomi: 7,8)
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0002-0000-0000-000000000007','To''qimachilik','🧶','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',7,'c1000000-0000-0000-0000-000000000002'),
+('c2000000-0002-0000-0000-000000000008','Xo''jalik buyumlari','🏠','https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',8,'c1000000-0000-0000-0000-000000000002')
+ON CONFLICT (id) DO NOTHING;
+
+-- Mebel — 5 ta yangi (davomi: 14,15,16,17,18)
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0001-0000-0000-000000000014','Buyurtma mebel','🛠️','https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',14,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000015','Mebel furniturasi','🔩','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',15,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000016','Yashash xonasi','🛋️','https://images.unsplash.com/photo-1567016432779-094069958ea5?w=400',16,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000017','Koridor va dahliz','🚪','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',17,'c1000000-0000-0000-0000-000000000001'),
+('c2000000-0001-0000-0000-000000000018','Oynalar va zerkalo','🪞','https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',18,'c1000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Qurilish va ta'mirlash — 2 ta yangi (davomi: 7,8)
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0005-0000-0000-000000000007','Elektr asboblari','🔌','https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400',7,'c1000000-0000-0000-0000-000000000005'),
+('c2000000-0005-0000-0000-000000000008','Gul qog''ozlar va elimlar','🎨','https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400',8,'c1000000-0000-0000-0000-000000000005')
+ON CONFLICT (id) DO NOTHING;
+
+-- Go'zallik va parvarish — 2 ta yangi (davomi: 6,7)
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0012-0000-0000-000000000006','Onalar va chaqaloqlar','🍼','https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400',6,'c1000000-0000-0000-0000-000000000012'),
+('c2000000-0012-0000-0000-000000000007','Shaxsiy gigiena','🧼','https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400',7,'c1000000-0000-0000-0000-000000000012')
+ON CONFLICT (id) DO NOTHING;
+
+-- Kitoblar va kanselyariya — 2 ta sub
+INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
+('c2000000-0016-0000-0000-000000000001','Kitoblar','📖','https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400',1,'c1000000-0000-0000-0000-000000000016'),
+('c2000000-0016-0000-0000-000000000002','Kanselyariya tovarlari','✏️','https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=400',2,'c1000000-0000-0000-0000-000000000016')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
 -- 5. BANNERLAR
 -- ============================================================
 INSERT INTO banners (id,title,subtitle,badge,image,gradient,link,is_active,sort_order) VALUES
