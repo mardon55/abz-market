@@ -59,12 +59,12 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Maishiy texnika subkategoriyalari (7 ta)
 INSERT INTO categories (id, name, icon, image, sort_order, parent_id) VALUES
-('c2000000-0003-0000-0000-000000000001','Muzlatgichlar','❄️','https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400',1,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000001','Muzlatgichlar','❄️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/us3ok51t_muzlatgich.jpg',1,'c1000000-0000-0000-0000-000000000003'),
 ('c2000000-0003-0000-0000-000000000002','Kir yuvish mashinalari','🌀','https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400',2,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000003','Televizorlar','📺','https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400',3,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000004','Konditsionerlar','🌬️','https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400',4,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000005','Oshxona texnikasi','🍳','https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400',5,'c1000000-0000-0000-0000-000000000003'),
-('c2000000-0003-0000-0000-000000000006','Changyutgich','🧹','https://images.unsplash.com/photo-1527515637462-cff94edd0000?w=400',6,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000003','Televizorlar','📺','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/v073hsv9_televezor.jpg',3,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000004','Konditsionerlar','🌬️','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/vvtsik30_konditsioner.webp',4,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000005','Oshxona texnikasi','🍳','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/j2f1cuyj_misirupka.webp',5,'c1000000-0000-0000-0000-000000000003'),
+('c2000000-0003-0000-0000-000000000006','Changyutgich','🧹','https://customer-assets.emergentagent.com/job_abz-download-tool/artifacts/krxlxob4_chang%20yutgich.jpg',6,'c1000000-0000-0000-0000-000000000003'),
 ('c2000000-0003-0000-0000-000000000007','Isitgich va ventilyator','🌡️','https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400',7,'c1000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
 
